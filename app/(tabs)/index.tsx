@@ -6,6 +6,7 @@ import { Alert, FlatList, Platform, Pressable, StyleSheet, Text, View } from "re
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
+import { useAuthState } from "@/lib/auth-context";
 import { initialHomework, schedule, todayKey, type ScheduleItem } from "@/shared/bakalari-data";
 
 const dateLabel = "Pátek 25. září";
@@ -18,8 +19,11 @@ function ping() {
 
 export default function HomeScreen() {
   const colors = useColors();
+  const { user, signOut } = useAuthState();
   const todaysSchedule = useMemo(() => schedule[todayKey] ?? [], []);
   const openHomework = initialHomework.filter((item) => !item.completed).length;
+  const displayName = user?.name ? user.name.charAt(0).toUpperCase() + user.name.slice(1) : "Jonáš";
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   const handleConnect = () => {
     ping();
@@ -62,18 +66,21 @@ export default function HomeScreen() {
             <View className="flex-row items-center justify-between pt-3">
               <View>
                 <Text className="text-sm font-semibold text-primary">Bakaláři Mobile</Text>
-                <Text className="mt-1 text-3xl font-bold text-foreground">Ahoj, Jonáši</Text>
-                <Text className="mt-1 text-sm text-muted">{dateLabel} · 3. ročník</Text>
+                <Text className="mt-1 text-3xl font-bold text-foreground">Ahoj, {displayName}</Text>
+                <Text className="mt-1 text-sm text-muted">{dateLabel} · {user?.schoolUrl ?? "lokální náhled"}</Text>
               </View>
               <Pressable
                 accessibilityLabel="Otevřít profil"
                 onPress={() => {
                   ping();
-                  Alert.alert("Profil", "Profil a připojení školy jsou v této verzi připravené jako další krok.");
+                  Alert.alert("Profil", `${user?.email ?? "demo@example.cz"}\n\nToto je lokální náhled session.`, [
+                    { text: "Zůstat přihlášen", style: "cancel" },
+                    { text: "Odhlásit se", style: "destructive", onPress: () => { void signOut().then(() => router.replace("/login")); } },
+                  ]);
                 }}
                 style={({ pressed }) => [styles.avatarButton, pressed && styles.pressed]}
               >
-                <Text className="text-lg font-bold text-primary">JN</Text>
+                <Text className="text-lg font-bold text-primary">{initials}</Text>
               </Pressable>
             </View>
 
