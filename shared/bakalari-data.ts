@@ -17,6 +17,9 @@ export type Grade = {
   average: string;
   trend: "up" | "steady" | "down";
   color: string;
+  latestMark?: string;
+  latestDate?: string;
+  latestCaption?: string;
 };
 
 export type Homework = {
