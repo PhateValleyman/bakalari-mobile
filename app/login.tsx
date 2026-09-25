@@ -71,7 +71,7 @@ export default function LoginScreen() {
             <View className="mt-8 gap-4">
               <View>
                 <Text className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">Adresa školy</Text>
-                <View className="flex-row items-center rounded-2xl bg-surface px-4" style={styles.inputShell}>
+                <View className="flex-row items-center rounded-2xl bg-surface px-4" style={[styles.inputShell, { borderColor: colors.border }]}>
                   <IconSymbol name="link" size={19} color={colors.muted} />
                   <TextInput
                     value={schoolUrl}
@@ -81,14 +81,14 @@ export default function LoginScreen() {
                     keyboardType="url"
                     placeholder="např. skola.bakalari.cz"
                     placeholderTextColor={colors.muted}
-                    style={styles.input}
+                    style={[styles.input, { color: colors.foreground }]}
                   />
                 </View>
               </View>
 
               <View>
                 <Text className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">E-mail nebo uživatelské jméno</Text>
-                <View className="flex-row items-center rounded-2xl bg-surface px-4" style={styles.inputShell}>
+                <View className="flex-row items-center rounded-2xl bg-surface px-4" style={[styles.inputShell, { borderColor: colors.border }]}>
                   <IconSymbol name="person.crop.circle" size={20} color={colors.muted} />
                   <TextInput
                     value={email}
@@ -98,7 +98,7 @@ export default function LoginScreen() {
                     keyboardType="email-address"
                     placeholder="uživatelské jméno"
                     placeholderTextColor={colors.muted}
-                    style={styles.input}
+                    style={[styles.input, { color: colors.foreground }]}
                   />
                 </View>
               </View>
@@ -110,7 +110,7 @@ export default function LoginScreen() {
                     <Text className="text-xs font-bold text-primary">Potřebuješ pomoc?</Text>
                   </Pressable>
                 </View>
-                <View className="flex-row items-center rounded-2xl bg-surface px-4" style={styles.inputShell}>
+                <View className="flex-row items-center rounded-2xl bg-surface px-4" style={[styles.inputShell, { borderColor: colors.border }]}>
                   <IconSymbol name="book.closed" size={19} color={colors.muted} />
                   <TextInput
                     value={password}
@@ -120,7 +120,7 @@ export default function LoginScreen() {
                     secureTextEntry
                     placeholder="Tvoje heslo"
                     placeholderTextColor={colors.muted}
-                    style={styles.input}
+                    style={[styles.input, { color: colors.foreground }]}
                   />
                 </View>
               </View>

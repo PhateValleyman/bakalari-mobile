@@ -58,7 +58,12 @@ export function normalizeSchoolUrl(input: string): string {
 }
 
 function tokenKey(schoolUrl: string): string {
-  return `${TOKEN_KEY_PREFIX}${encodeURIComponent(normalizeSchoolUrl(schoolUrl))}`;
+  const normalized = normalizeSchoolUrl(schoolUrl);
+  // SecureStore keys allow only alphanumeric characters, dots, dashes, and underscores.
+  const safeSchoolId = Array.from(normalized)
+    .map((character) => character.charCodeAt(0).toString(16).padStart(4, "0"))
+    .join("");
+  return `${TOKEN_KEY_PREFIX}${safeSchoolId}`;
 }
 
 async function getStoredValue(key: string): Promise<string | null> {
