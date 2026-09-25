@@ -1,48 +1,169 @@
-import { ScrollView, Text, View, TouchableOpacity } from "react-native";
+import { router } from "expo-router";
+import * as Haptics from "expo-haptics";
+import { useMemo } from "react";
+import { Alert, FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ScreenContainer } from "@/components/screen-container";
+import { useColors } from "@/hooks/use-colors";
+import { initialHomework, schedule, todayKey, type ScheduleItem } from "@/shared/bakalari-data";
 
-/**
- * Home Screen - NativeWind Example
- *
- * This template uses NativeWind (Tailwind CSS for React Native).
- * You can use familiar Tailwind classes directly in className props.
- *
- * Key patterns:
- * - Use `className` instead of `style` for most styling
- * - Theme colors: use tokens directly (bg-background, text-foreground, bg-primary, etc.); no dark: prefix needed
- * - Responsive: standard Tailwind breakpoints work on web
- * - Custom colors defined in tailwind.config.js
- */
+const dateLabel = "Pátek 25. září";
+
+function ping() {
+  if (Platform.OS !== "web") {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }
+}
+
 export default function HomeScreen() {
-  return (
-    <ScreenContainer className="p-6">
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View className="flex-1 gap-8">
-          {/* Hero Section */}
-          <View className="items-center gap-2">
-            <Text className="text-4xl font-bold text-foreground">Welcome</Text>
-            <Text className="text-base text-muted text-center">
-              Edit app/(tabs)/index.tsx to get started
-            </Text>
-          </View>
+  const colors = useColors();
+  const todaysSchedule = useMemo(() => schedule[todayKey] ?? [], []);
+  const openHomework = initialHomework.filter((item) => !item.completed).length;
 
-          {/* Example Card */}
-          <View className="w-full max-w-sm self-center bg-surface rounded-2xl p-6 shadow-sm border border-border">
-            <Text className="text-lg font-semibold text-foreground mb-2">NativeWind Ready</Text>
-            <Text className="text-sm text-muted leading-relaxed">
-              Use Tailwind CSS classes directly in your React Native components.
-            </Text>
-          </View>
+  const handleConnect = () => {
+    ping();
+    Alert.alert(
+      "Připojit školu",
+      "Toto je lokální náhled aplikace. Napojení na Bakaláři API bude další krok; přihlašovací údaje se zatím nikam neukládají.",
+      [{ text: "Rozumím", style: "default" }],
+    );
+  };
 
-          {/* Example Button */}
-          <View className="items-center">
-            <TouchableOpacity className="bg-primary px-6 py-3 rounded-full active:opacity-80">
-              <Text className="text-background font-semibold">Get Started</Text>
-            </TouchableOpacity>
+  const renderScheduleItem = ({ item }: { item: ScheduleItem }) => (
+    <View style={styles.timelineRow}>
+      <View style={styles.timeColumn}>
+        <Text className="text-sm font-bold text-foreground">{item.time}</Text>
+        <View style={[styles.timelineDot, { backgroundColor: item.color }]} />
+      </View>
+      <View className="flex-1 rounded-2xl bg-surface px-4 py-3" style={styles.lessonCard}>
+        <View className="flex-row items-center justify-between">
+          <Text className="text-base font-bold text-foreground">{item.subject}</Text>
+          <View className="rounded-full px-2 py-1" style={{ backgroundColor: `${item.color}18` }}>
+            <Text style={{ color: item.color }} className="text-xs font-bold">{item.room}</Text>
           </View>
         </View>
-      </ScrollView>
+        <Text className="mt-1 text-xs text-muted">{item.teacher}</Text>
+        {item.note ? <Text className="mt-2 text-xs font-semibold text-primary">{item.note}</Text> : null}
+      </View>
+    </View>
+  );
+
+  return (
+    <ScreenContainer className="px-5" edges={["top", "left", "right"]}>
+      <FlatList
+        data={todaysSchedule}
+        keyExtractor={(item) => item.id}
+        renderItem={renderScheduleItem}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
+        ListHeaderComponent={
+          <View>
+            <View className="flex-row items-center justify-between pt-3">
+              <View>
+                <Text className="text-sm font-semibold text-primary">Bakaláři Mobile</Text>
+                <Text className="mt-1 text-3xl font-bold text-foreground">Ahoj, Jonáši</Text>
+                <Text className="mt-1 text-sm text-muted">{dateLabel} · 3. ročník</Text>
+              </View>
+              <Pressable
+                accessibilityLabel="Otevřít profil"
+                onPress={() => {
+                  ping();
+                  Alert.alert("Profil", "Profil a připojení školy jsou v této verzi připravené jako další krok.");
+                }}
+                style={({ pressed }) => [styles.avatarButton, pressed && styles.pressed]}
+              >
+                <Text className="text-lg font-bold text-primary">JN</Text>
+              </Pressable>
+            </View>
+
+            <View className="mt-5 rounded-3xl bg-primary p-5" style={styles.heroCard}>
+              <View className="flex-row items-start justify-between">
+                <View className="flex-1">
+                  <Text className="text-xs font-bold uppercase tracking-widest" style={{ color: "#DCEAFF" }}>Dnešní program</Text>
+                  <Text className="mt-2 text-2xl font-bold text-white">{todaysSchedule.length} vyučovací hodiny</Text>
+                  <Text className="mt-1 text-sm" style={{ color: "#DCEAFF" }}>Nejbližší hodina začíná v {todaysSchedule[0]?.time ?? "—"}.</Text>
+                </View>
+                <View className="rounded-2xl p-3" style={{ backgroundColor: "#FFFFFF22" }}>
+                  <IconSymbol name="calendar" size={25} color="#FFFFFF" />
+                </View>
+              </View>
+              <Pressable
+                onPress={() => {
+                  ping();
+                  router.push("/schedule");
+                }}
+                style={({ pressed }) => [styles.heroAction, pressed && styles.pressed]}
+              >
+                <Text className="text-sm font-bold text-primary">Zobrazit celý rozvrh</Text>
+                <IconSymbol name="chevron.right" size={18} color={colors.primary} />
+              </Pressable>
+            </View>
+
+            <View className="mt-5 flex-row gap-3">
+              <View className="flex-1 rounded-2xl bg-surface p-4" style={styles.metricCard}>
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-xs font-semibold text-muted">Průměr</Text>
+                  <IconSymbol name="chart.bar.fill" size={18} color="#2F7DF6" />
+                </View>
+                <Text className="mt-2 text-2xl font-bold text-foreground">1,4</Text>
+                <Text className="mt-1 text-xs font-semibold" style={{ color: colors.success }}>+0,2 tento měsíc</Text>
+              </View>
+              <View className="flex-1 rounded-2xl bg-surface p-4" style={styles.metricCard}>
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-xs font-semibold text-muted">Úkoly</Text>
+                  <IconSymbol name="checklist" size={18} color="#F0A33A" />
+                </View>
+                <Text className="mt-2 text-2xl font-bold text-foreground">{openHomework}</Text>
+                <Text className="mt-1 text-xs font-semibold text-warning">čekají na odevzdání</Text>
+              </View>
+            </View>
+
+            <View className="mt-7 mb-3 flex-row items-center justify-between">
+              <Text className="text-xl font-bold text-foreground">Dnešní rozvrh</Text>
+              <Pressable
+                onPress={() => router.push("/schedule")}
+                style={({ pressed }) => [styles.smallAction, pressed && styles.pressed]}
+              >
+                <Text className="text-sm font-bold text-primary">Vše</Text>
+                <IconSymbol name="chevron.right" size={16} color={colors.primary} />
+              </Pressable>
+            </View>
+          </View>
+        }
+        ListFooterComponent={
+          <View className="mt-6 mb-4 rounded-2xl border border-border bg-surface p-4">
+            <View className="flex-row items-center gap-3">
+              <View className="rounded-xl p-2" style={{ backgroundColor: "#2F7DF618" }}>
+                <IconSymbol name="link" size={20} color={colors.primary} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-bold text-foreground">Lokální náhled</Text>
+                <Text className="mt-1 text-xs leading-5 text-muted">Data jsou ukázková. Připoj školní účet až ve chvíli, kdy bude připravené bezpečné API.</Text>
+              </View>
+            </View>
+            <Pressable onPress={handleConnect} style={({ pressed }) => [styles.connectButton, pressed && styles.pressed]}>
+              <Text className="text-sm font-bold text-primary">Jak připojit školu?</Text>
+              <IconSymbol name="info.circle" size={17} color={colors.primary} />
+            </Pressable>
+          </View>
+        }
+      />
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  listContent: { paddingBottom: 24 },
+  heroCard: { shadowColor: "#2F7DF6", shadowOpacity: 0.24, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 5 },
+  metricCard: { minHeight: 116, shadowColor: "#172033", shadowOpacity: 0.05, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  avatarButton: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: "#E5EEFF" },
+  heroAction: { marginTop: 18, backgroundColor: "#FFFFFF", borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  smallAction: { flexDirection: "row", alignItems: "center", gap: 3, paddingVertical: 6, paddingLeft: 8 },
+  timelineRow: { flexDirection: "row", alignItems: "stretch", gap: 10, marginBottom: 10 },
+  timeColumn: { width: 44, alignItems: "center", paddingTop: 14, gap: 8 },
+  timelineDot: { width: 8, height: 8, borderRadius: 4 },
+  lessonCard: { shadowColor: "#172033", shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
+  connectButton: { marginTop: 14, borderTopWidth: 1, borderTopColor: "#E5EAF2", paddingTop: 13, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  pressed: { opacity: 0.76, transform: [{ scale: 0.98 }] },
+});
