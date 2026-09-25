@@ -17,7 +17,7 @@ function ping() {
 
 export default function GradesScreen() {
   const colors = useColors();
-  const { data: grades, loading, refreshing, error, cacheAge, fromCache, refresh } = useBakalariGrades();
+  const { data: grades, loading, error, refresh } = useBakalariGrades();
   const average = useMemo(() => calculateAverage(grades), [grades]);
 
   const renderGrade = ({ item }: { item: Grade }) => (
@@ -79,8 +79,6 @@ export default function GradesScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderGrade}
         showsVerticalScrollIndicator={false}
-        refreshing={refreshing}
-        onRefresh={() => { ping(); refresh(); }}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View>
@@ -93,7 +91,6 @@ export default function GradesScreen() {
                 </Pressable>
               </View>
               <Text className="mt-1 text-sm text-muted">{loading ? "Synchronizuji se školou…" : "Poslední známky podle předmětů"}</Text>
-              {fromCache ? <Text className="mt-1 text-xs font-semibold text-warning">Offline cache · {cacheAge ?? "uloženo"}{refreshing ? " · synchronizuji…" : ""}</Text> : null}
             </View>
             <View className="mt-6 flex-row items-center rounded-3xl bg-surface p-5" style={[styles.summaryCard, { backgroundColor: colors.surface }] }>
               <View className="h-24 w-24 items-center justify-center rounded-full" style={[styles.averageCircle, { borderColor: colors.border, backgroundColor: colors.background }]}>
