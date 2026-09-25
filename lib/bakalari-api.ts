@@ -58,12 +58,7 @@ export function normalizeSchoolUrl(input: string): string {
 }
 
 function tokenKey(schoolUrl: string): string {
-  const normalized = normalizeSchoolUrl(schoolUrl);
-  // SecureStore keys allow only alphanumeric characters, dots, dashes, and underscores.
-  const safeSchoolId = Array.from(normalized)
-    .map((character) => character.charCodeAt(0).toString(16).padStart(4, "0"))
-    .join("");
-  return `${TOKEN_KEY_PREFIX}${safeSchoolId}`;
+  return `${TOKEN_KEY_PREFIX}${encodeURIComponent(normalizeSchoolUrl(schoolUrl))}`;
 }
 
 async function getStoredValue(key: string): Promise<string | null> {
@@ -112,15 +107,8 @@ async function readMeta(baseKey: string): Promise<TokenMeta | null> {
   const raw = await getStoredValue(`${baseKey}.meta`);
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as Partial<TokenMeta>;
-    if (
-      !Number.isInteger(parsed.accessCount) || typeof parsed.accessCount !== "number" || parsed.accessCount <= 0 ||
-      !Number.isInteger(parsed.refreshCount) || typeof parsed.refreshCount !== "number" || parsed.refreshCount <= 0 ||
-      typeof parsed.expiresAt !== "number" || !Number.isFinite(parsed.expiresAt) || parsed.expiresAt <= 0
-    ) {
-      return null;
-    }
-    return parsed as TokenMeta;
+    const parsed = JSON.parse(raw) as TokenMeta;
+    return parsed.accessCount > 0 && parsed.refreshCount > 0 && parsed.expiresAt > 0 ? parsed : null;
   } catch {
     return null;
   }
@@ -183,10 +171,7 @@ function formBody(values: Record<string, string>): string {
 async function parseResponse(response: Response): Promise<Record<string, unknown>> {
   let body: Record<string, unknown> = {};
   try {
-    const parsed: unknown = await response.json();
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      body = parsed as Record<string, unknown>;
-    }
+    body = (await response.json()) as Record<string, unknown>;
   } catch {
     // Keep a stable error below when the school returns a non-JSON response.
   }
@@ -201,24 +186,15 @@ async function parseResponse(response: Response): Promise<Record<string, unknown
   return body;
 }
 
-// Apply a bounded timeout to requests that otherwise could leave the mobile UI waiting indefinitely.
-async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  if (init?.signal) return fetch(input, init);
+async function postTokenRequest(schoolUrl: string, body: Record<string, string>): Promise<BakalariLoginResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    return await fetch(input, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function postTokenRequest(schoolUrl: string, body: Record<string, string>): Promise<BakalariLoginResult> {
-  try {
-    const response = await fetchWithTimeout(`${normalizeSchoolUrl(schoolUrl)}/api/login`, {
+    const response = await fetch(`${normalizeSchoolUrl(schoolUrl)}/api/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: formBody({ client_id: "ANDR", ...body }),
+      signal: controller.signal,
     });
     const payload = await parseResponse(response);
     const accessToken = typeof payload.access_token === "string" ? payload.access_token : "";
@@ -246,6 +222,8 @@ async function postTokenRequest(schoolUrl: string, body: Record<string, string>)
       throw new BakalariApiError("Školní server není dostupný nebo blokuje připojení z této aplikace.", 0);
     }
     throw error;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -307,28 +285,20 @@ export async function forceRefreshBakalariSession(schoolUrl: string): Promise<st
 export async function bakalariFetch<T>(schoolUrl: string, path: string, init?: RequestInit): Promise<T> {
   const accessToken = await getValidAccessToken(schoolUrl);
   if (!accessToken) throw new BakalariApiError("Session školy vypršela. Přihlaste se znovu.", 401);
-  const url = `${normalizeSchoolUrl(schoolUrl)}${path.startsWith("/") ? path : `/${path}`}`;
-  const headers = new Headers(init?.headers);
-  headers.set("Authorization", `Bearer ${accessToken}`);
-  headers.set("Accept", "application/json");
-  try {
-    const response = await fetchWithTimeout(url, { ...init, headers });
-    if (response.status === 401) {
-      const latestToken = await forceRefreshBakalariSession(schoolUrl);
-      if (!latestToken) throw new BakalariApiError("Session školy vypršela. Přihlaste se znovu.", 401);
-      const retryHeaders = new Headers(init?.headers);
-      retryHeaders.set("Authorization", `Bearer ${latestToken}`);
-      retryHeaders.set("Accept", "application/json");
-      const retryResponse = await fetchWithTimeout(response.url, { ...init, headers: retryHeaders });
-      if (!retryResponse.ok) throw new BakalariApiError(`Autorizovaný požadavek selhal (${retryResponse.status}).`, retryResponse.status);
-      return (await retryResponse.json()) as T;
-    }
-    if (!response.ok) throw new BakalariApiError(`Požadavek na Bakaláře selhal (${response.status}).`, response.status);
-    return (await response.json()) as T;
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new BakalariApiError("Požadavek na školu vypršel. Zkontrolujte připojení k síti.", 408);
-    }
-    throw error;
+  const response = await fetch(`${normalizeSchoolUrl(schoolUrl)}${path.startsWith("/") ? path : `/${path}`}`, {
+    ...init,
+    headers: { ...(init?.headers ?? {}), Authorization: `Bearer ${accessToken}` },
+  });
+  if (response.status === 401) {
+    const latestToken = await forceRefreshBakalariSession(schoolUrl);
+    if (!latestToken) throw new BakalariApiError("Session školy vypršela. Přihlaste se znovu.", 401);
+    const retryResponse = await fetch(response.url, {
+      ...init,
+      headers: { ...(init?.headers ?? {}), Authorization: `Bearer ${latestToken}` },
+    });
+    if (!retryResponse.ok) throw new BakalariApiError(`Autorizovaný požadavek selhal (${retryResponse.status}).`, retryResponse.status);
+    return (await retryResponse.json()) as T;
   }
+  if (!response.ok) throw new BakalariApiError(`Požadavek na Bakaláře selhal (${response.status}).`, response.status);
+  return (await response.json()) as T;
 }

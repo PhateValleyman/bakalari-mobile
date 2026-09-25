@@ -17,8 +17,8 @@ function ping() {
 export default function LoginScreen() {
   const colors = useColors();
   const { status, signIn } = useAuthState();
-  const [schoolUrl, setSchoolUrl] = useState("bakalari.example.cz");
-  const [email, setEmail] = useState("student@example.cz");
+  const [schoolUrl, setSchoolUrl] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +34,7 @@ export default function LoginScreen() {
     setError(null);
     setSubmitting(true);
     try {
-      await signIn({ schoolUrl, email, password: password || "demo-preview" });
+      await signIn({ schoolUrl, email, password });
       router.replace("/(tabs)");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Přihlášení se nepodařilo.");
@@ -59,7 +59,7 @@ export default function LoginScreen() {
                 </View>
               </View>
               <View className="rounded-full px-3 py-1.5" style={{ backgroundColor: "#E5EEFF" }}>
-                <Text className="text-[10px] font-bold uppercase tracking-wider text-primary">Náhled</Text>
+                <Text className="text-[10px] font-bold uppercase tracking-wider text-primary">API</Text>
               </View>
             </View>
 
@@ -96,7 +96,7 @@ export default function LoginScreen() {
                     autoCapitalize="none"
                     autoCorrect={false}
                     keyboardType="email-address"
-                    placeholder="student@example.cz"
+                    placeholder="uživatelské jméno"
                     placeholderTextColor={colors.muted}
                     style={styles.input}
                   />
@@ -106,8 +106,8 @@ export default function LoginScreen() {
               <View>
                 <View className="mb-2 flex-row items-center justify-between">
                   <Text className="text-xs font-bold uppercase tracking-wider text-muted">Heslo</Text>
-                  <Pressable onPress={() => setError("Obnova hesla bude dostupná po napojení skutečného API.")}>
-                    <Text className="text-xs font-bold text-primary">Zapomenuté heslo?</Text>
+                  <Pressable onPress={() => setError("Obnovu hesla řeší tvoje škola nebo školní správce.")}>
+                    <Text className="text-xs font-bold text-primary">Potřebuješ pomoc?</Text>
                   </Pressable>
                 </View>
                 <View className="flex-row items-center rounded-2xl bg-surface px-4" style={styles.inputShell}>
@@ -138,12 +138,12 @@ export default function LoginScreen() {
               onPress={handleSubmit}
               style={({ pressed }) => [styles.submitButton, pressed && styles.pressed, submitting && styles.disabled]}
             >
-              {submitting ? <ActivityIndicator color="#FFFFFF" /> : <><Text className="text-base font-bold text-white">Přihlásit se</Text><IconSymbol name="chevron.right" size={19} color="#FFFFFF" /></>}
+              {submitting ? <ActivityIndicator color="#FFFFFF" /> : <><Text className="text-base font-bold text-white">Přihlásit ke škole</Text><IconSymbol name="chevron.right" size={19} color="#FFFFFF" /></>}
             </Pressable>
 
             <View className="mt-5 flex-row items-start gap-2 rounded-2xl border border-border bg-surface p-4">
               <IconSymbol name="info.circle" size={18} color={colors.primary} />
-              <Text className="flex-1 text-xs leading-5 text-muted">Toto je bezpečný lokální náhled. Údaje se zatím neposílají na server; skutečné ověření bude doplněno přes API.</Text>
+              <Text className="flex-1 text-xs leading-5 text-muted">Přihlášení používá OAuth endpoint školy. Heslo se po přihlášení neukládá; na telefonu jsou tokeny v SecureStore, webové preview používá lokální fallback.</Text>
             </View>
           </View>
 

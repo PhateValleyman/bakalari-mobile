@@ -25,11 +25,11 @@ export default function HomeScreen() {
   const displayName = user?.name ? user.name.charAt(0).toUpperCase() + user.name.slice(1) : "Jonáš";
   const initials = displayName.slice(0, 2).toUpperCase();
 
-  const handleConnect = () => {
+  const handleConnectionInfo = () => {
     ping();
     Alert.alert(
-      "Připojit školu",
-      "Toto je lokální náhled aplikace. Napojení na Bakaláři API bude další krok; přihlašovací údaje se zatím nikam neukládají.",
+      "Připojení školy",
+      `Účet: ${user?.email ?? "—"}\nServer: ${user?.schoolUrl ?? "—"}\n\nAccess token se obnovuje automaticky přes refresh token. Přehledná data v této MVP verzi jsou zatím lokální ukázka.`,
       [{ text: "Rozumím", style: "default" }],
     );
   };
@@ -145,12 +145,12 @@ export default function HomeScreen() {
                 <IconSymbol name="link" size={20} color={colors.primary} />
               </View>
               <View className="flex-1">
-                <Text className="text-sm font-bold text-foreground">Lokální náhled</Text>
-                <Text className="mt-1 text-xs leading-5 text-muted">Data jsou ukázková. Připoj školní účet až ve chvíli, kdy bude připravené bezpečné API.</Text>
+                <Text className="text-sm font-bold text-foreground">Škola je připojená</Text>
+                <Text className="mt-1 text-xs leading-5 text-muted">Přihlášení proběhlo přes Bakaláři API. Obsah přehledu je zatím lokální ukázka připravená pro další synchronizaci.</Text>
               </View>
             </View>
-            <Pressable onPress={handleConnect} style={({ pressed }) => [styles.connectButton, pressed && styles.pressed]}>
-              <Text className="text-sm font-bold text-primary">Jak připojit školu?</Text>
+            <Pressable onPress={handleConnectionInfo} style={({ pressed }) => [styles.connectButton, pressed && styles.pressed]}>
+              <Text className="text-sm font-bold text-primary">Zobrazit stav připojení</Text>
               <IconSymbol name="info.circle" size={17} color={colors.primary} />
             </Pressable>
           </View>
