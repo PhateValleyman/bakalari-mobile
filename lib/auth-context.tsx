@@ -2,6 +2,13 @@ import * as SecureStore from "expo-secure-store";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Platform } from "react-native";
 
+import {
+  clearBakalariTokens,
+  getValidAccessToken,
+  loginToBakalari,
+  normalizeSchoolUrl,
+} from "@/lib/bakalari-api";
+
 export type AuthStatus = "loading" | "signed_out" | "signed_in";
 
 export type AuthUser = {
@@ -20,9 +27,10 @@ type AuthContextValue = {
   signOut: () => Promise<void>;
 };
 
-const SESSION_KEY = "bakalari-mobile.auth-session.v1";
+const SESSION_KEY = "bakalari-mobile.auth-session.v2";
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// Store only non-sensitive profile metadata separately from the API token pair.
 async function readSession(): Promise<AuthUser | null> {
   try {
     const raw = Platform.OS === "web"
@@ -57,10 +65,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    readSession().then((storedUser) => {
+    readSession().then(async (storedUser) => {
       if (!active) return;
-      setUser(storedUser);
-      setStatus(storedUser ? "signed_in" : "signed_out");
+      if (!storedUser) {
+        setStatus("signed_out");
+        return;
+      }
+      const accessToken = await getValidAccessToken(storedUser.schoolUrl);
+      if (!active) return;
+      if (accessToken) {
+        setUser(storedUser);
+        setStatus("signed_in");
+      } else {
+        await clearSession();
+        setStatus("signed_out");
+      }
     });
     return () => {
       active = false;
@@ -69,16 +88,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async ({ schoolUrl, email, password }: { schoolUrl: string; email: string; password: string }) => {
     if (!schoolUrl.trim() || !email.trim() || !password) {
-      throw new Error("Vyplňte školní adresu, e-mail a heslo.");
+      throw new Error("Vyplňte školní adresu, uživatelské jméno a heslo.");
     }
-
-    // Future API boundary: replace this local demo session with an API request.
+    const normalizedSchoolUrl = normalizeSchoolUrl(schoolUrl);
+    const result = await loginToBakalari(normalizedSchoolUrl, email.trim(), password);
+    const name = email.trim().split("@")[0] || "Student";
     const nextUser: AuthUser = {
-      id: `demo-${email.trim().toLowerCase()}`,
-      name: email.trim().split("@")[0] || "Student",
+      id: result.userId || `bakalari-${email.trim().toLowerCase()}`,
+      name: name.charAt(0).toUpperCase() + name.slice(1),
       email: email.trim(),
-      schoolUrl: schoolUrl.trim(),
-      isDemo: true,
+      schoolUrl: normalizedSchoolUrl,
+      isDemo: false,
     };
     await writeSession(nextUser);
     setUser(nextUser);
@@ -86,10 +106,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    if (user?.schoolUrl) {
+      await clearBakalariTokens(user.schoolUrl);
+    }
     await clearSession();
     setUser(null);
     setStatus("signed_out");
-  }, []);
+  }, [user?.schoolUrl]);
 
   const value = useMemo<AuthContextValue>(() => ({
     status,
