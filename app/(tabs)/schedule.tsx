@@ -17,7 +17,7 @@ function ping() {
 
 export default function ScheduleScreen() {
   const colors = useColors();
-  const { data: week, loading, error, refresh } = useBakalariSchedule();
+  const { data: week, loading, error, refreshing, cacheAge, fromCache, refresh } = useBakalariSchedule();
   const [selectedDayKey, setSelectedDayKey] = useState("");
 
   useEffect(() => {
@@ -100,6 +100,7 @@ export default function ScheduleScreen() {
                 </Pressable>
               </View>
               <Text className="mt-1 text-sm text-muted">{week?.rangeLabel ?? "Načítám školní týden…"}</Text>
+              {fromCache ? <Text className="mt-1 text-xs font-semibold text-warning">Offline cache · {cacheAge ?? "uloženo"}{refreshing ? " · synchronizuji…" : ""}</Text> : null}
             </View>
             {week?.days.length ? (
               <View className="mt-6 flex-row justify-between rounded-2xl bg-surface p-2" style={styles.dayPicker}>
