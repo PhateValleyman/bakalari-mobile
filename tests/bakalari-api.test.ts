@@ -7,8 +7,16 @@ vi.mock("expo-secure-store", () => ({
   deleteItemAsync: vi.fn(),
 }));
 vi.mock("react-native", () => ({ Platform: { OS: "web" } }));
+const storage = new Map<string, string>();
+vi.mock("@react-native-async-storage/async-storage", () => ({
+  default: {
+    getItem: vi.fn(async (key: string) => storage.get(key) ?? null),
+    setItem: vi.fn(async (key: string, value: string) => { storage.set(key, value); }),
+  },
+}));
 
 import { BakalariApiError, normalizeSchoolUrl } from "../lib/bakalari-api";
+import { bakalariCache, formatCacheAge } from "../lib/bakalari-cache";
 import { calculateAverage, normalizeMarks, normalizeTimetable } from "../lib/bakalari-data";
 
 describe("normalizeSchoolUrl", () => {
@@ -51,5 +59,18 @@ describe("Bakalari data normalization", () => {
     });
     expect(grades[0]).toMatchObject({ subject: "Matematika", latestMark: "1", latestCaption: "Písemka", average: "1,50" });
     expect(calculateAverage(grades)).toBe("1,50");
+  });
+});
+
+describe("offline cache", () => {
+  it("stores and reads schedule data per school", async () => {
+    const data = { days: [], rangeLabel: "Test" };
+    await bakalariCache.writeSchedule("school.example.cz", data);
+    await expect(bakalariCache.readSchedule("https://school.example.cz")).resolves.toMatchObject({ data });
+  });
+
+  it("formats cache age for the UI", () => {
+    expect(formatCacheAge(Date.now())).toBe("právě teď");
+    expect(formatCacheAge(null)).toBeNull();
   });
 });

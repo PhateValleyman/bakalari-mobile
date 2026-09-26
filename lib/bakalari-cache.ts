@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { normalizeSchoolUrl } from "./bakalari-api";
 import type { ScheduleWeek } from "./bakalari-data";
-import type { AbsenceSummary, Grade, Homework } from "../shared/bakalari-data";
+import type { Grade } from "../shared/bakalari-data";
 
 const CACHE_VERSION = 1;
 const CACHE_PREFIX = "bakalari-mobile/cache/v1";
@@ -16,7 +16,7 @@ type StoredCache<T> = CachedValue<T> & {
   version: number;
 };
 
-function cacheKey(schoolUrl: string, resource: "schedule" | "grades" | "homeworks" | "absence"): string {
+function cacheKey(schoolUrl: string, resource: "schedule" | "grades"): string {
   // encodeURIComponent keeps the school origin isolated and the key portable across native and web storage.
   return `${CACHE_PREFIX}/${resource}/${encodeURIComponent(normalizeSchoolUrl(schoolUrl))}`;
 }
@@ -55,18 +55,6 @@ export const bakalariCache = {
   },
   writeGrades(schoolUrl: string, data: Grade[]) {
     return writeCache(cacheKey(schoolUrl, "grades"), data);
-  },
-  readHomeworks(schoolUrl: string) {
-    return readCache<Homework[]>(cacheKey(schoolUrl, "homeworks"));
-  },
-  writeHomeworks(schoolUrl: string, data: Homework[]) {
-    return writeCache(cacheKey(schoolUrl, "homeworks"), data);
-  },
-  readAbsence(schoolUrl: string) {
-    return readCache<AbsenceSummary>(cacheKey(schoolUrl, "absence"));
-  },
-  writeAbsence(schoolUrl: string, data: AbsenceSummary) {
-    return writeCache(cacheKey(schoolUrl, "absence"), data);
   },
 };
 
