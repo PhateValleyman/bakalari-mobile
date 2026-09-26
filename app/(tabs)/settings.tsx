@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -7,6 +7,9 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { exportBackup, importBackup } from "@/lib/backup";
 import { useAuthState } from "@/lib/auth-context";
+import { bakalariCache } from "@/lib/bakalari-cache";
+import { cancelHomeworkNotifications, requestHomeworkNotificationPermission, scheduleHomeworkNotifications } from "@/lib/homework-notifications";
+import { getHomeworkNotificationsEnabled, setHomeworkNotificationsEnabled } from "@/lib/notification-settings";
 import { useThemeContext } from "@/lib/theme-provider";
 
 function ping() {
@@ -18,7 +21,36 @@ export default function SettingsScreen() {
   const { user } = useAuthState();
   const { colorScheme, setColorScheme } = useThemeContext();
   const [busy, setBusy] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const isDark = colorScheme === "dark";
+
+  useEffect(() => {
+    void getHomeworkNotificationsEnabled().then(setNotificationsEnabled);
+  }, []);
+
+  const handleNotificationsChanged = async (enabled: boolean) => {
+    ping();
+    setNotificationsEnabled(enabled);
+    await setHomeworkNotificationsEnabled(enabled);
+    if (!enabled) {
+      await cancelHomeworkNotifications();
+      return;
+    }
+    if (Platform.OS === "web") {
+      Alert.alert("Upozornění jsou pro mobil", "Na webovém náhledu se místní upozornění nespouštějí. V nativní aplikaci budou fungovat na pozadí.");
+      return;
+    }
+    const granted = await requestHomeworkNotificationPermission();
+    if (!granted) {
+      setNotificationsEnabled(false);
+      await setHomeworkNotificationsEnabled(false);
+      Alert.alert("Oprávnění zamítnuto", "Povol upozornění v nastavení zařízení, aby aplikace mohla hlídat termíny úkolů.");
+      return;
+    }
+    const cached = user ? await bakalariCache.readHomework(user.schoolUrl) : null;
+    const count = await scheduleHomeworkNotifications(cached?.data ?? []);
+    Alert.alert("Upozornění zapnutá", count ? `Naplánováno ${count} připomenutí podle uložených úkolů.` : "Aktuálně nejsou naplánována žádná budoucí připomenutí.");
+  };
 
   const handleExport = async () => {
     if (!user || busy) return;
@@ -69,6 +101,17 @@ export default function SettingsScreen() {
               <Text className="mt-1 text-xs leading-5 text-muted">Volba se uloží i po restartu aplikace.</Text>
             </View>
             <Switch value={isDark} onValueChange={(value) => { ping(); setColorScheme(value ? "dark" : "light"); }} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#FFFFFF" />
+          </View>
+          <View className="my-5 h-px" style={{ backgroundColor: colors.border }} />
+          <View className="flex-row items-center gap-3">
+            <View className="rounded-2xl p-3" style={{ backgroundColor: `${colors.warning}18` }}>
+              <IconSymbol name="bell.fill" size={22} color={colors.warning} />
+            </View>
+            <View className="flex-1">
+              <Text className="text-base font-bold text-foreground">Termíny úkolů</Text>
+              <Text className="mt-1 text-xs leading-5 text-muted">Připomene den předem a ráno v den termínu.</Text>
+            </View>
+            <Switch value={notificationsEnabled} onValueChange={(value) => void handleNotificationsChanged(value)} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#FFFFFF" />
           </View>
         </View>
 

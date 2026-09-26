@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 
 import { errorMessage, fetchActualTimetable, fetchHomework, fetchMarks, type ScheduleWeek } from "@/lib/bakalari-data";
 import { bakalariCache, formatCacheAge } from "@/lib/bakalari-cache";
+import { scheduleHomeworkNotifications } from "@/lib/homework-notifications";
+import { getHomeworkNotificationsEnabled } from "@/lib/notification-settings";
 import { useAuthState } from "@/lib/auth-context";
 import type { Grade, Homework } from "@/shared/bakalari-data";
 
@@ -132,6 +134,13 @@ export function useBakalariHomework() {
       .finally(() => { if (active) { setLoading(false); setRefreshing(false); } });
     return () => { active = false; };
   }, [user?.schoolUrl, reloadKey]);
+
+  useEffect(() => {
+    if (!data.length) return;
+    void getHomeworkNotificationsEnabled().then((enabled) => {
+      if (enabled) void scheduleHomeworkNotifications(data);
+    });
+  }, [data]);
 
   return {
     data, loading, refreshing, error,

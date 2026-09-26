@@ -18,6 +18,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 import { BakalariApiError, normalizeSchoolUrl } from "../lib/bakalari-api";
 import { bakalariCache, formatCacheAge } from "../lib/bakalari-cache";
 import { calculateAverage, normalizeHomework, normalizeMarks, normalizeTimetable } from "../lib/bakalari-data";
+import { buildHomeworkReminderPlan } from "../lib/homework-notification-plan";
 
 describe("normalizeSchoolUrl", () => {
   it("adds https and removes a trailing slash", () => {
@@ -66,6 +67,16 @@ describe("Bakalari data normalization", () => {
       Homeworks: [{ Id: "H1", Subject: { Id: "S1", Name: "Matematika" }, Title: "Procvičit funkce", EndDate: `${new Date().getFullYear()}-12-31`, IsDone: false }],
     });
     expect(homework[0]).toMatchObject({ id: "H1", subject: "Matematika", title: "Procvičit funkce", dueLabel: expect.stringContaining("31.") });
+  });
+
+  it("plans two future reminders only for open homework", () => {
+    const reminders = buildHomeworkReminderPlan([
+      { id: "H1", subject: "Matematika", title: "Procvičit funkce", due: "2026-09-28", dueLabel: "do 28. 9.", color: "#2F7DF6", completed: false },
+      { id: "H2", subject: "Dějepis", title: "Mapa Evropy", due: "2026-09-28", dueLabel: "do 28. 9.", color: "#F2994A", completed: true },
+    ], new Date("2026-09-26T09:00:00"));
+    expect(reminders).toHaveLength(2);
+    expect(reminders.map((item) => item.label)).toEqual(["den předem", "ráno v den termínu"]);
+    expect(reminders.every((item) => item.homeworkId === "H1")).toBe(true);
   });
 });
 

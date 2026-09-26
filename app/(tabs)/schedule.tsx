@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ScreenContainer } from "@/components/screen-container";
@@ -31,11 +31,13 @@ export default function ScheduleScreen() {
     [selectedDayKey, week],
   );
   const lessons = selectedDay?.lessons ?? [];
+  const todayDay = week?.days.find((day) => day.date === todayIsoDate());
 
   const renderLesson = ({ item, index }: { item: ScheduleItem; index: number }) => (
     <View style={styles.lessonRow}>
       <View style={styles.timeBlock}>
         <Text className="text-sm font-bold text-foreground">{item.time}</Text>
+        <Text className="mt-1 text-[10px] font-semibold text-muted">{index + 1}. hod.</Text>
         <View className="mt-1 h-7 w-px" style={{ backgroundColor: colors.border }} />
       </View>
       <View className="flex-1 rounded-2xl bg-surface p-4" style={[styles.lessonCard, { borderLeftColor: item.color }]}> 
@@ -51,7 +53,7 @@ export default function ScheduleScreen() {
         </View>
         <View className="mt-3 flex-row items-center justify-between">
           <Text className="text-xs text-muted">{item.teacher || "Učitel neuveden"}</Text>
-          <Text className="text-xs font-semibold text-muted">{index + 1}. hodina</Text>
+          <Text className="text-xs font-semibold text-muted">{item.room === "—" ? "Místnost neuvedena" : `Místnost ${item.room}`}</Text>
         </View>
         {item.note ? (
           <View className="mt-3 flex-row items-center gap-2 rounded-xl px-3 py-2" style={{ backgroundColor: `${item.color}12` }}>
@@ -89,6 +91,7 @@ export default function ScheduleScreen() {
         renderItem={renderLesson}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} colors={[colors.primary]} />}
         ListHeaderComponent={
           <View>
             <View className="pt-3">
@@ -99,7 +102,15 @@ export default function ScheduleScreen() {
                   <IconSymbol name="arrow.clockwise" size={20} color={colors.primary} />
                 </Pressable>
               </View>
-              <Text className="mt-1 text-sm text-muted">{week?.rangeLabel ?? "Načítám školní týden…"}</Text>
+              <View className="mt-1 flex-row items-center justify-between gap-3">
+                <Text className="flex-1 text-sm text-muted">{week?.rangeLabel ?? "Načítám školní týden…"}</Text>
+                {todayDay ? (
+                  <Pressable onPress={() => { ping(); setSelectedDayKey(todayDay.key); }} style={({ pressed }) => [styles.todayButton, { backgroundColor: `${colors.primary}14` }, pressed && styles.pressed]}>
+                    <IconSymbol name="calendar.today" size={15} color={colors.primary} />
+                    <Text className="text-xs font-bold text-primary">Dnes</Text>
+                  </Pressable>
+                ) : null}
+              </View>
               {fromCache ? <Text className="mt-1 text-xs font-semibold text-warning">Offline cache · {cacheAge ?? "uloženo"}{refreshing ? " · synchronizuji…" : ""}</Text> : null}
             </View>
             {week?.days.length ? (
@@ -110,22 +121,27 @@ export default function ScheduleScreen() {
                     <Pressable
                       key={`${day.key}-${day.date}`}
                       onPress={() => { ping(); setSelectedDayKey(day.key); }}
-                      style={({ pressed }) => [styles.dayButton, active && styles.dayButtonActive, pressed && styles.pressed]}
+                      style={({ pressed }) => [styles.dayButton, active && [styles.dayButtonActive, { backgroundColor: colors.primary }], pressed && styles.pressed]}
                     >
                       <Text className="text-xs font-semibold" style={{ color: active ? "#FFFFFF" : colors.muted }}>{day.label}</Text>
                       <Text className="mt-1 text-base font-bold" style={{ color: active ? "#FFFFFF" : colors.foreground }}>{day.date ? Number(day.date.split("-")[2]) : "—"}</Text>
+                      {day.date === todayDay?.date ? <Text className="mt-0.5 text-[9px] font-bold" style={{ color: active ? "#FFFFFF" : colors.primary }}>dnes</Text> : null}
                     </Pressable>
                   );
                 })}
               </View>
             ) : null}
             <View className="mb-4 mt-7 flex-row items-center justify-between">
-              <Text className="text-xl font-bold text-foreground">{selectedDay?.label ?? "Dnes"} {selectedDay?.dateLabel ?? ""}</Text>
+              <View className="flex-1">
+                <Text className="text-xl font-bold text-foreground">{selectedDay?.label ?? "Dnes"} {selectedDay?.dateLabel ?? ""}</Text>
+                {selectedDay?.description ? <Text className="mt-1 text-xs font-semibold text-warning">{selectedDay.description}</Text> : null}
+              </View>
               <Text className="text-sm font-semibold text-muted">{loading ? "…" : `${lessons.length} ${lessons.length === 1 ? "hodina" : "hodin"}`}</Text>
             </View>
           </View>
         }
         ListEmptyComponent={emptyState}
+        ListFooterComponent={<Text className="mt-2 mb-4 text-center text-xs leading-5 text-muted">Přejetím doleva nebo doprava přepneš hlavní části aplikace.</Text>}
       />
     </ScreenContainer>
   );
@@ -135,12 +151,13 @@ const styles = StyleSheet.create({
   listContent: { paddingBottom: 24 },
   dayPicker: { shadowColor: "#172033", shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   dayButton: { flex: 1, alignItems: "center", borderRadius: 14, paddingVertical: 9 },
-  dayButtonActive: { backgroundColor: "#2F7DF6", shadowColor: "#2F7DF6", shadowOpacity: 0.28, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  dayButtonActive: { shadowColor: "#2F7DF6", shadowOpacity: 0.28, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   lessonRow: { flexDirection: "row", gap: 12, marginBottom: 12 },
   timeBlock: { width: 45, alignItems: "center", paddingTop: 15 },
   lessonCard: { borderLeftWidth: 4, shadowColor: "#172033", shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
   subjectDot: { width: 9, height: 9, borderRadius: 5 },
   iconButton: { width: 42, height: 42, borderRadius: 14, backgroundColor: "#E5EEFF", alignItems: "center", justifyContent: "center" },
+  todayButton: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 7, flexDirection: "row", alignItems: "center", gap: 5 },
   retryButton: { marginTop: 14, borderTopWidth: 1, borderTopColor: "#E5EAF2", paddingTop: 13, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   pressed: { opacity: 0.75, transform: [{ scale: 0.97 }] },
 });
