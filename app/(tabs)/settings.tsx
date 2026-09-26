@@ -19,10 +19,9 @@ function ping() {
 export default function SettingsScreen() {
   const colors = useColors();
   const { user } = useAuthState();
-  const { colorScheme, setColorScheme } = useThemeContext();
+  const { colorScheme, themeVariant, accentColor, setColorScheme, setThemeVariant, setAccentColor } = useThemeContext();
   const [busy, setBusy] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const isDark = colorScheme === "dark";
 
   useEffect(() => {
     void getHomeworkNotificationsEnabled().then(setNotificationsEnabled);
@@ -57,7 +56,7 @@ export default function SettingsScreen() {
     ping();
     setBusy(true);
     try {
-      await exportBackup(user, colorScheme);
+      await exportBackup(user, themeVariant === "black" ? "black" : colorScheme);
     } catch (error) {
       Alert.alert("Záloha se nepodařila", error instanceof Error ? error.message : "Soubor se nepodařilo vytvořit.");
     } finally {
@@ -71,7 +70,8 @@ export default function SettingsScreen() {
     setBusy(true);
     try {
       const backup = await importBackup(user.schoolUrl);
-      if (backup.theme) setColorScheme(backup.theme);
+      if (backup.theme === "black") setThemeVariant("black");
+      else if (backup.theme) setColorScheme(backup.theme);
       if (backup.exportedAt) {
         Alert.alert("Obnova dokončena", `Data ze zálohy z ${new Date(backup.exportedAt).toLocaleString("cs-CZ")} jsou připravena v offline cache.`);
       }
@@ -93,15 +93,12 @@ export default function SettingsScreen() {
 
         <View className="mt-7 rounded-3xl bg-surface p-5" style={[styles.card, { backgroundColor: colors.surface }]}>
           <View className="flex-row items-center gap-3">
-            <View className="rounded-2xl p-3" style={{ backgroundColor: `${colors.primary}18` }}>
-              <IconSymbol name={isDark ? "moon" : "sun"} size={22} color={colors.primary} />
-            </View>
-            <View className="flex-1">
-              <Text className="text-base font-bold text-foreground">Tmavý režim</Text>
-              <Text className="mt-1 text-xs leading-5 text-muted">Volba se uloží i po restartu aplikace.</Text>
-            </View>
-            <Switch value={isDark} onValueChange={(value) => { ping(); setColorScheme(value ? "dark" : "light"); }} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#FFFFFF" />
+            <View className="rounded-2xl p-3" style={{ backgroundColor: `${colors.primary}18` }}><IconSymbol name={themeVariant === "light" ? "sun" : "moon"} size={22} color={colors.primary} /></View>
+            <View className="flex-1"><Text className="text-base font-bold text-foreground">Vzhled aplikace</Text><Text className="mt-1 text-xs leading-5 text-muted">Předvolba se uloží i po restartu aplikace.</Text></View>
           </View>
+          <View className="mt-4 flex-row gap-2"><Pressable onPress={() => { ping(); setThemeVariant("system"); }} style={({ pressed }) => [styles.themeChip, themeVariant === "system" && { backgroundColor: colors.primary }, pressed && styles.pressed]}><Text className="text-xs font-bold" style={{ color: themeVariant === "system" ? "#FFF" : colors.muted }}>Systém</Text></Pressable><Pressable onPress={() => { ping(); setThemeVariant("light"); }} style={({ pressed }) => [styles.themeChip, themeVariant === "light" && { backgroundColor: colors.primary }, pressed && styles.pressed]}><Text className="text-xs font-bold" style={{ color: themeVariant === "light" ? "#FFF" : colors.muted }}>Světlý</Text></Pressable><Pressable onPress={() => { ping(); setThemeVariant("dark"); }} style={({ pressed }) => [styles.themeChip, themeVariant === "dark" && { backgroundColor: colors.primary }, pressed && styles.pressed]}><Text className="text-xs font-bold" style={{ color: themeVariant === "dark" ? "#FFF" : colors.muted }}>Tmavý</Text></Pressable><Pressable onPress={() => { ping(); setThemeVariant("black"); }} style={({ pressed }) => [styles.themeChip, themeVariant === "black" && { backgroundColor: colors.primary }, pressed && styles.pressed]}><Text className="text-xs font-bold" style={{ color: themeVariant === "black" ? "#FFF" : colors.muted }}>Černý</Text></Pressable></View>
+          <Text className="mt-4 text-xs font-bold text-muted">Akcentní barva</Text>
+          <View className="mt-2 flex-row gap-3">{["#2F7DF6", "#8B5CF6", "#0F9D8A", "#E07A35", "#D94F70"].map((color) => <Pressable key={color} accessibilityLabel={`Akcentní barva ${color}`} onPress={() => { ping(); setAccentColor(color); }} style={({ pressed }) => [styles.colorSwatch, { backgroundColor: color }, accentColor === color && styles.colorSwatchActive, pressed && styles.pressed]} />)}</View>
           <View className="my-5 h-px" style={{ backgroundColor: colors.border }} />
           <View className="flex-row items-center gap-3">
             <View className="rounded-2xl p-3" style={{ backgroundColor: `${colors.warning}18` }}>
@@ -148,6 +145,9 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   content: { paddingBottom: 28 },
   card: { shadowColor: "#172033", shadowOpacity: 0.05, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  themeChip: { borderRadius: 999, backgroundColor: "#EEF2F8", paddingHorizontal: 11, paddingVertical: 8 },
+  colorSwatch: { width: 30, height: 30, borderRadius: 15 },
+  colorSwatchActive: { borderWidth: 3, borderColor: "#FFFFFF", shadowColor: "#172033", shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
   action: { marginTop: 12, minHeight: 50, borderRadius: 16, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 12 },
   pressed: { opacity: 0.75, transform: [{ scale: 0.985 }] },
   disabled: { opacity: 0.5 },

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { errorMessage, fetchActualTimetable, fetchHomework, fetchMarks, type ScheduleWeek } from "@/lib/bakalari-data";
+import { errorMessage, fetchActualTimetable, fetchHomework, fetchMarks, fetchPermanentTimetable, type ScheduleWeek } from "@/lib/bakalari-data";
 import { bakalariCache, formatCacheAge } from "@/lib/bakalari-cache";
 import { scheduleHomeworkNotifications } from "@/lib/homework-notifications";
 import { getHomeworkNotificationsEnabled } from "@/lib/notification-settings";
@@ -10,8 +10,10 @@ import type { Grade, Homework } from "@/shared/bakalari-data";
 type CacheState = { savedAt: number | null; source: "cache" | "network" | null };
 const emptyCacheState: CacheState = { savedAt: null, source: null };
 
-export function useBakalariSchedule() {
+export function useBakalariSchedule(options: { date?: string; permanent?: boolean } = {}) {
   const { user } = useAuthState();
+  const date = options.date ?? "current";
+  const permanent = options.permanent ?? false;
   const [data, setData] = useState<ScheduleWeek | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -25,31 +27,64 @@ export function useBakalariSchedule() {
     let networkResolved = false;
     const schoolUrl = user?.schoolUrl;
     if (!schoolUrl) {
-      setData(null); setLoading(false); setRefreshing(false); setError("Školní účet není připojený."); setCacheState(emptyCacheState);
+      setData(null);
+      setLoading(false);
+      setRefreshing(false);
+      setError("Školní účet není připojený.");
+      setCacheState(emptyCacheState);
       return () => { active = false; };
     }
-    setLoading(true); setRefreshing(false); setError(null); setCacheState(emptyCacheState);
-    void bakalariCache.readSchedule(schoolUrl).then((cached) => {
+
+    setLoading(true);
+    setRefreshing(false);
+    setError(null);
+    setCacheState(emptyCacheState);
+    const scope = permanent ? "permanent" : date;
+    const loadSchedule = permanent
+      ? fetchPermanentTimetable(schoolUrl)
+      : fetchActualTimetable(schoolUrl, date === "current" ? undefined : date);
+
+    void bakalariCache.readSchedule(schoolUrl, scope).then((cached) => {
       if (!active || networkResolved || !cached) return;
-      setData(cached.data); setLoading(false); setCacheState({ savedAt: cached.savedAt, source: "cache" });
+      setData(cached.data);
+      setLoading(false);
+      setCacheState({ savedAt: cached.savedAt, source: "cache" });
     });
-    void fetchActualTimetable(schoolUrl)
+
+    void loadSchedule
       .then(async (nextData) => {
         networkResolved = true;
-        await bakalariCache.writeSchedule(schoolUrl, nextData);
+        await bakalariCache.writeSchedule(schoolUrl, nextData, scope);
         if (!active) return;
-        setData(nextData); setCacheState({ savedAt: Date.now(), source: "network" }); setError(null);
+        setData(nextData);
+        setCacheState({ savedAt: Date.now(), source: "network" });
+        setError(null);
       })
-      .catch((reason) => { networkResolved = true; if (active) setError(errorMessage(reason)); })
-      .finally(() => { if (active) { setLoading(false); setRefreshing(false); } });
+      .catch((reason) => {
+        networkResolved = true;
+        if (active) setError(errorMessage(reason));
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      });
+
     return () => { active = false; };
-  }, [user?.schoolUrl, reloadKey]);
+  }, [date, permanent, user?.schoolUrl, reloadKey]);
 
   return {
-    data, loading, refreshing, error,
+    data,
+    loading,
+    refreshing,
+    error,
     cacheAge: formatCacheAge(cacheState.savedAt),
     fromCache: cacheState.source === "cache",
-    refresh: () => { setRefreshing(true); refresh(); },
+    refresh: () => {
+      setRefreshing(true);
+      refresh();
+    },
   };
 }
 

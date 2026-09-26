@@ -26,6 +26,7 @@ type BakalariAtom = {
   TeacherId?: string | number | null;
   RoomId?: string | number | null;
   Theme?: string | null;
+  HomeworkIds?: Array<string | number>;
   Change?: BakalariChange | null;
 };
 
@@ -133,6 +134,39 @@ export function todayIsoDate(): string {
   return isoDate();
 }
 
+export function weekMondayIsoDate(date = new Date()): string {
+  const monday = new Date(date);
+  const day = monday.getDay();
+  const distance = day === 0 ? -6 : 1 - day;
+  monday.setDate(monday.getDate() + distance);
+  return isoDate(monday);
+}
+
+export function shiftWeekIsoDate(weekOffset: number, date = new Date()): string {
+  const monday = new Date(`${weekMondayIsoDate(date)}T12:00:00`);
+  monday.setDate(monday.getDate() + weekOffset * 7);
+  return isoDate(monday);
+}
+
+export function isCurrentLesson(time: string, now = new Date()): boolean {
+  const match = time.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return false;
+  const minutes = Number(match[1]) * 60 + Number(match[2]);
+  const current = now.getHours() * 60 + now.getMinutes();
+  return current >= minutes && current < minutes + 50;
+}
+
+export function changeLabel(changeType: string | undefined): string | undefined {
+  const labels: Record<string, string> = {
+    added: "Přidaná hodina",
+    removed: "Zrušená hodina",
+    cancelled: "Zrušená hodina",
+    substitution: "Změna učitele",
+    moved: "Přesunutá hodina",
+  };
+  return changeType ? labels[changeType.toLowerCase()] ?? "Změna v rozvrhu" : undefined;
+}
+
 function datePart(value: string | undefined): string {
   return value?.slice(0, 10) ?? "";
 }
@@ -179,14 +213,21 @@ export function normalizeTimetable(payload: BakalariTimetableResponse): Schedule
       const hour = hours.get(atom.HourId ?? -1);
       const change = atom.Change;
       const note = [text(atom.Theme), text(change?.Description), text(change?.Time)].filter(Boolean).join(" · ");
+      const changeType = text(change?.ChangeType);
       return {
         id: `${date || "day"}-${atom.HourId ?? index}-${subjectId || index}`,
         time: hourLabel(hour, index + 1),
         subject: text(subject?.Name) || text(subject?.Abbrev) || "Neurčený předmět",
+        subjectAbbreviation: text(subject?.Abbrev) || undefined,
         teacher: text(teacher?.Name) || text(teacher?.Abbrev) || "",
+        teacherAbbreviation: text(teacher?.Abbrev) || undefined,
         room: text(room?.Name) || text(room?.Abbrev) || "—",
         color: colorForSubject(subjectId),
         note: note || undefined,
+        homeworkCount: atom.HomeworkIds?.length ?? 0,
+        changeType: changeType || undefined,
+        changeLabel: text(change?.Description) || undefined,
+        cancelled: changeType.toLowerCase() === "removed" || changeType.toLowerCase() === "cancelled",
       } satisfies ScheduleItem;
     });
     lessons.sort((left, right) => left.time.localeCompare(right.time, "cs", { numeric: true }));
@@ -209,6 +250,11 @@ export function normalizeTimetable(payload: BakalariTimetableResponse): Schedule
 
 export async function fetchActualTimetable(schoolUrl: string, date = todayIsoDate()): Promise<ScheduleWeek> {
   const payload = await bakalariFetch<BakalariTimetableResponse>(schoolUrl, `/api/3/timetable/actual?date=${encodeURIComponent(date)}`);
+  return normalizeTimetable(payload);
+}
+
+export async function fetchPermanentTimetable(schoolUrl: string): Promise<ScheduleWeek> {
+  const payload = await bakalariFetch<BakalariTimetableResponse>(schoolUrl, "/api/3/timetable/permanent");
   return normalizeTimetable(payload);
 }
 

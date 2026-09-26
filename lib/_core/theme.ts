@@ -3,13 +3,11 @@ import { Platform } from "react-native";
 import themeConfig from "@/theme.config";
 
 export type ColorScheme = "light" | "dark";
+export type ThemeColorTokens = typeof themeConfig.themeColors;
+export type ThemeColorName = keyof ThemeColorTokens;
+export type SchemePalette = Record<ColorScheme, Record<ThemeColorName, string>>;
 
 export const ThemeColors = themeConfig.themeColors;
-
-type ThemeColorTokens = typeof ThemeColors;
-type ThemeColorName = keyof ThemeColorTokens;
-type SchemePalette = Record<ColorScheme, Record<ThemeColorName, string>>;
-type SchemePaletteItem = SchemePalette[ColorScheme];
 
 function buildSchemePalette(colors: ThemeColorTokens): SchemePalette {
   const palette: SchemePalette = {
@@ -28,7 +26,7 @@ function buildSchemePalette(colors: ThemeColorTokens): SchemePalette {
 
 export const SchemeColors = buildSchemePalette(ThemeColors);
 
-type RuntimePalette = SchemePaletteItem & {
+type RuntimePalette = SchemePalette[ColorScheme] & {
   text: string;
   background: string;
   tint: string;
@@ -38,8 +36,11 @@ type RuntimePalette = SchemePaletteItem & {
   border: string;
 };
 
-function buildRuntimePalette(scheme: ColorScheme): RuntimePalette {
-  const base = SchemeColors[scheme];
+export function buildRuntimePalette(
+  scheme: ColorScheme,
+  overrides: Partial<SchemePalette[ColorScheme]> = {},
+): RuntimePalette {
+  const base = { ...SchemeColors[scheme], ...overrides };
   return {
     ...base,
     text: base.foreground,
@@ -57,7 +58,7 @@ export const Colors = {
   dark: buildRuntimePalette("dark"),
 } satisfies Record<ColorScheme, RuntimePalette>;
 
-export type ThemeColorPalette = (typeof Colors)[ColorScheme];
+export type ThemeColorPalette = RuntimePalette;
 
 export const Fonts = Platform.select({
   ios: {

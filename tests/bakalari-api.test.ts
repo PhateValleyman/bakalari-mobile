@@ -17,7 +17,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 
 import { BakalariApiError, normalizeSchoolUrl } from "../lib/bakalari-api";
 import { bakalariCache, formatCacheAge } from "../lib/bakalari-cache";
-import { calculateAverage, normalizeHomework, normalizeMarks, normalizeTimetable } from "../lib/bakalari-data";
+import { calculateAverage, changeLabel, isCurrentLesson, normalizeHomework, normalizeMarks, normalizeTimetable, shiftWeekIsoDate, weekMondayIsoDate } from "../lib/bakalari-data";
 import { buildHomeworkReminderPlan } from "../lib/homework-notification-plan";
 import { nextTabPath } from "../lib/tab-navigation";
 
@@ -40,12 +40,12 @@ describe("Bakalari data normalization", () => {
   it("resolves timetable ids to a displayable lesson", () => {
     const week = normalizeTimetable({
       Hours: [{ Id: 3, Caption: "1", BeginTime: "8:00", EndTime: "8:45" }],
-      Days: [{ Date: "2026-09-25T00:00:00+02:00", DayOfWeek: 5, Atoms: [{ HourId: 3, SubjectId: "S1", TeacherId: "T1", RoomId: "R1" }] }],
+      Days: [{ Date: "2026-09-25T00:00:00+02:00", DayOfWeek: 5, Atoms: [{ HourId: 3, SubjectId: "S1", TeacherId: "T1", RoomId: "R1", HomeworkIds: ["H1"], Change: { ChangeType: "Substitution", Description: "Změna učitele" } }] }],
       Subjects: [{ Id: "S1", Abbrev: "MAT", Name: "Matematika" }],
       Teachers: [{ Id: "T1", Abbrev: "Nov", Name: "Mgr. Novák" }],
       Rooms: [{ Id: "R1", Abbrev: "214", Name: "214" }],
     });
-    expect(week.days[0].lessons[0]).toMatchObject({ subject: "Matematika", teacher: "Mgr. Novák", room: "214", time: "8:00" });
+    expect(week.days[0].lessons[0]).toMatchObject({ subject: "Matematika", teacher: "Mgr. Novák", room: "214", time: "8:00", homeworkCount: 1, changeType: "Substitution", changeLabel: "Změna učitele" });
   });
 
   it("keeps the latest mark and subject averages", () => {
@@ -101,5 +101,20 @@ describe("swipe tab navigation", () => {
     expect(nextTabPath("/", 100)).toBeNull();
     expect(nextTabPath("/settings", -100)).toBeNull();
     expect(nextTabPath("/homework", 20)).toBeNull();
+  });
+});
+
+describe("schedule navigation helpers", () => {
+  it("returns Monday for any date and shifts whole weeks", () => {
+    expect(weekMondayIsoDate(new Date("2026-09-27T12:00:00"))).toBe("2026-09-21");
+    expect(shiftWeekIsoDate(1, new Date("2026-09-27T12:00:00"))).toBe("2026-09-28");
+    expect(shiftWeekIsoDate(-1, new Date("2026-09-27T12:00:00"))).toBe("2026-09-14");
+  });
+
+  it("identifies the current lesson from its start time", () => {
+    expect(isCurrentLesson("8:00", new Date("2026-09-26T08:20:00"))).toBe(true);
+    expect(isCurrentLesson("8:00", new Date("2026-09-26T09:00:00"))).toBe(false);
+    expect(changeLabel("Substitution")).toBe("Změna učitele");
+    expect(changeLabel("Removed")).toBe("Zrušená hodina");
   });
 });

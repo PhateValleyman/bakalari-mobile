@@ -3,10 +3,16 @@ export type ScheduleItem = {
   id: string;
   time: string;
   subject: string;
+  subjectAbbreviation?: string;
   teacher: string;
+  teacherAbbreviation?: string;
   room: string;
   color: string;
   note?: string;
+  homeworkCount?: number;
+  changeType?: string;
+  changeLabel?: string;
+  cancelled?: boolean;
 };
 
 export type Grade = {

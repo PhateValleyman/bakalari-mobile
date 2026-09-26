@@ -16,9 +16,9 @@ type StoredCache<T> = CachedValue<T> & {
   version: number;
 };
 
-function cacheKey(schoolUrl: string, resource: "schedule" | "grades" | "homework"): string {
+function cacheKey(schoolUrl: string, resource: "schedule" | "grades" | "homework", scope = "current"): string {
   // encodeURIComponent keeps the school origin isolated and the key portable across native and web storage.
-  return `${CACHE_PREFIX}/${resource}/${encodeURIComponent(normalizeSchoolUrl(schoolUrl))}`;
+  return `${CACHE_PREFIX}/${resource}/${scope}/${encodeURIComponent(normalizeSchoolUrl(schoolUrl))}`;
 }
 
 async function readCache<T>(key: string): Promise<CachedValue<T> | null> {
@@ -44,11 +44,11 @@ async function writeCache<T>(key: string, data: T): Promise<void> {
 }
 
 export const bakalariCache = {
-  readSchedule(schoolUrl: string) {
-    return readCache<ScheduleWeek>(cacheKey(schoolUrl, "schedule"));
+  readSchedule(schoolUrl: string, scope = "current") {
+    return readCache<ScheduleWeek>(cacheKey(schoolUrl, "schedule", scope));
   },
-  writeSchedule(schoolUrl: string, data: ScheduleWeek) {
-    return writeCache(cacheKey(schoolUrl, "schedule"), data);
+  writeSchedule(schoolUrl: string, data: ScheduleWeek, scope = "current") {
+    return writeCache(cacheKey(schoolUrl, "schedule", scope), data);
   },
   readGrades(schoolUrl: string) {
     return readCache<Grade[]>(cacheKey(schoolUrl, "grades"));

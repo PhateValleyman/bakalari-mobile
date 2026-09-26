@@ -6,17 +6,19 @@ import { bakalariCache } from "@/lib/bakalari-cache";
 import type { ColorScheme } from "@/constants/theme";
 import type { AuthUser } from "@/lib/auth-context";
 
+export type BackupTheme = ColorScheme | "black";
+
 type BackupPayload = {
   version: 1;
   exportedAt: string;
   user: Pick<AuthUser, "email" | "schoolUrl">;
-  theme: ColorScheme;
+  theme: BackupTheme;
   schedule: Awaited<ReturnType<typeof bakalariCache.readSchedule>>;
   grades: Awaited<ReturnType<typeof bakalariCache.readGrades>>;
   homework: Awaited<ReturnType<typeof bakalariCache.readHomework>>;
 };
 
-export async function exportBackup(user: AuthUser, theme: ColorScheme): Promise<void> {
+export async function exportBackup(user: AuthUser, theme: BackupTheme): Promise<void> {
   const [schedule, grades, homework] = await Promise.all([
     bakalariCache.readSchedule(user.schoolUrl),
     bakalariCache.readGrades(user.schoolUrl),
@@ -37,7 +39,7 @@ export async function exportBackup(user: AuthUser, theme: ColorScheme): Promise<
   await Sharing.shareAsync(uri, { mimeType: "application/json", dialogTitle: "Záloha Bakaláři Mobile" });
 }
 
-export async function importBackup(schoolUrl: string): Promise<{ theme?: ColorScheme; exportedAt?: string }> {
+export async function importBackup(schoolUrl: string): Promise<{ theme?: BackupTheme; exportedAt?: string }> {
   const result = await DocumentPicker.getDocumentAsync({ type: "application/json", copyToCacheDirectory: true });
   if (result.canceled || !result.assets[0]) return {};
   const raw = await FileSystem.readAsStringAsync(result.assets[0].uri, { encoding: FileSystem.EncodingType.UTF8 });
