@@ -19,6 +19,7 @@ import { BakalariApiError, normalizeSchoolUrl } from "../lib/bakalari-api";
 import { bakalariCache, formatCacheAge } from "../lib/bakalari-cache";
 import { calculateAverage, normalizeHomework, normalizeMarks, normalizeTimetable } from "../lib/bakalari-data";
 import { buildHomeworkReminderPlan } from "../lib/homework-notification-plan";
+import { nextTabPath } from "../lib/tab-navigation";
 
 describe("normalizeSchoolUrl", () => {
   it("adds https and removes a trailing slash", () => {
@@ -90,5 +91,15 @@ describe("offline cache", () => {
   it("formats cache age for the UI", () => {
     expect(formatCacheAge(Date.now())).toBe("právě teď");
     expect(formatCacheAge(null)).toBeNull();
+  });
+});
+
+describe("swipe tab navigation", () => {
+  it("moves left and right without leaving the tab range", () => {
+    expect(nextTabPath("/homework", -100)).toBe("/settings");
+    expect(nextTabPath("/homework", 100)).toBe("/grades");
+    expect(nextTabPath("/", 100)).toBeNull();
+    expect(nextTabPath("/settings", -100)).toBeNull();
+    expect(nextTabPath("/homework", 20)).toBeNull();
   });
 });
