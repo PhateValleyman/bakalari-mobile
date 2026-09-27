@@ -41,18 +41,22 @@ const env = {
 
 const withAndroidNdkVersion: ConfigPlugin = (config) =>
   withProjectBuildGradle(config, (project) => {
-    const marker = "// Bakaláři Mobile: pin Android NDK version";
     if (project.modResults.language !== "groovy") {
       throw new Error("Bakaláři Mobile requires a Groovy android/build.gradle file.");
     }
-    if (!project.modResults.contents.includes(marker)) {
+
+    const ndkVersion = "29.0.14206865";
+    const ndkPattern = /ndkVersion\\s*=\\s*[^\\n]+/;
+
+    if (ndkPattern.test(project.modResults.contents)) {
       project.modResults.contents = project.modResults.contents.replace(
-        'apply plugin: "com.facebook.react.rootproject"',
-        'apply plugin: "com.facebook.react.rootproject"\n\n' +
-          marker +
-          '\next.ndkVersion = "29.0.14206865"'
+        ndkPattern,
+        `ndkVersion = "${ndkVersion}"`
       );
+    } else {
+      throw new Error("Bakaláři Mobile could not find the Android NDK version in android/build.gradle.");
     }
+
     return project;
   });
 
