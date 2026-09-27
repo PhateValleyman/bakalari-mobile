@@ -1,6 +1,7 @@
 // Load environment variables with proper priority (system > .env)
 import "./scripts/load-env.js";
-import type { ExpoConfig } from "expo/config";
+import type { ExpoConfig, ConfigContext } from "expo/config";
+import { withProjectBuildGradle, type ConfigPlugin } from "expo/config-plugins";
 
 // Bundle ID format: space.manus.<project_name_dots>.<timestamp>
 // e.g., "my-app" created at 2024-01-15 10:30:45 -> "space.manus.my.app.t20240115103045"
@@ -37,6 +38,23 @@ const env = {
   iosBundleId: bundleId,
   androidPackage: bundleId,
 };
+
+const withAndroidNdkVersion: ConfigPlugin = (config) =>
+  withProjectBuildGradle(config, (project) => {
+    const marker = "// Bakaláři Mobile: pin Android NDK version";
+    if (project.modResults.language !== "groovy") {
+      throw new Error("Bakaláři Mobile requires a Groovy android/build.gradle file.");
+    }
+    if (!project.modResults.contents.includes(marker)) {
+      project.modResults.contents = project.modResults.contents.replace(
+        'apply plugin: "com.facebook.react.rootproject"',
+        'apply plugin: "com.facebook.react.rootproject"\\n\\n' +
+          marker +
+          '\\next.ndkVersion = "29.0.14206865"'
+      );
+    }
+    return project;
+  });
 
 const config: ExpoConfig = {
   name: env.appName,
@@ -86,6 +104,7 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    withAndroidNdkVersion,
     [
       "expo-audio",
       {
@@ -117,7 +136,6 @@ const config: ExpoConfig = {
         android: {
           buildArchs: ["armeabi-v7a", "arm64-v8a"],
           minSdkVersion: 24,
-          ndkVersion: "29.0.14206865",
         },
       },
     ],
