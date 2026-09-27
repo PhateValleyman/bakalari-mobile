@@ -22,11 +22,12 @@ export function useBakalariSchedule() {
     let active = true;
     let networkResolved = false;
     const schoolUrl = user?.schoolUrl;
+    const isManualRefresh = reloadKey > 0;
     if (!schoolUrl) {
       setData(null); setLoading(false); setRefreshing(false); setError("Školní účet není připojený."); setCacheState(emptyCacheState);
       return () => { active = false; };
     }
-    setLoading(true); setRefreshing(false); setError(null); setCacheState(emptyCacheState);
+    setLoading(!isManualRefresh); setRefreshing(isManualRefresh); setError(null); setCacheState(emptyCacheState);
     void bakalariCache.readSchedule(schoolUrl).then((cached) => {
       if (!active || networkResolved || !cached) return;
       setData(cached.data); setLoading(false); setCacheState({ savedAt: cached.savedAt, source: "cache" });
@@ -65,11 +66,12 @@ export function useBakalariGrades() {
     let active = true;
     let networkResolved = false;
     const schoolUrl = user?.schoolUrl;
+    const isManualRefresh = reloadKey > 0;
     if (!schoolUrl) {
       setData([]); setLoading(false); setRefreshing(false); setError("Školní účet není připojený."); setCacheState(emptyCacheState);
       return () => { active = false; };
     }
-    setLoading(true); setRefreshing(false); setError(null); setCacheState(emptyCacheState);
+    setLoading(!isManualRefresh); setRefreshing(isManualRefresh); setError(null); setCacheState(emptyCacheState);
     void bakalariCache.readGrades(schoolUrl).then((cached) => {
       if (!active || networkResolved || !cached) return;
       setData(cached.data); setLoading(false); setCacheState({ savedAt: cached.savedAt, source: "cache" });
