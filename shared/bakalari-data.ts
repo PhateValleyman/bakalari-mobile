@@ -2,6 +2,7 @@
 export type ScheduleItem = {
   id: string;
   time: string;
+  endTime?: string;
   subject: string;
   subjectAbbreviation?: string;
   teacher: string;

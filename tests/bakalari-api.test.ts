@@ -112,7 +112,8 @@ describe("schedule navigation helpers", () => {
   });
 
   it("identifies the current lesson from its start time", () => {
-    expect(isCurrentLesson("8:00", new Date("2026-09-26T08:20:00"))).toBe(true);
+    expect(isCurrentLesson("8:00", new Date("2026-09-26T08:20:00"), "8:45")).toBe(true);
+    expect(isCurrentLesson("8:00", new Date("2026-09-26T08:45:00"), "8:45")).toBe(false);
     expect(isCurrentLesson("8:00", new Date("2026-09-26T09:00:00"))).toBe(false);
     expect(changeLabel("Substitution")).toBe("Změna učitele");
     expect(changeLabel("Removed")).toBe("Zrušená hodina");

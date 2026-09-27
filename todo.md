@@ -13,6 +13,7 @@
 - [x] Persistovaný výběr motivu a akcentní barvy.
 - [x] Záloha a obnova zachovává černý motiv.
 - [x] Vitest pokrytí pro week navigation, aktuální hodinu a změny.
+- [x] Automatický scroll na právě probíhající hodinu po načtení a při změně hodiny.
 
 ## Záměrně mimo scope
 
@@ -21,6 +22,6 @@
 
 ## Následující kandidáti
 
-- [ ] Přidat časovou osu dne a automatický scroll na aktuální hodinu.
+- [ ] Přidat časovou osu dne s vizuální čárou aktuálního času.
 - [ ] Přidat nastavení začátku týdne a kompaktní režim pro tablety.
 - [ ] Přidat export/import vlastních motivů jako JSON.

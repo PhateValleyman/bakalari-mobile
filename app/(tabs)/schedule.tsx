@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, Modal, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -27,6 +27,10 @@ export default function ScheduleScreen() {
   const [permanent, setPermanent] = useState(false);
   const [selectedDayKey, setSelectedDayKey] = useState("");
   const [selectedLesson, setSelectedLesson] = useState<ScheduleItem | null>(null);
+  const [clockTick, setClockTick] = useState(() => Date.now());
+  const [listReady, setListReady] = useState(false);
+  const listRef = useRef<FlatList<ScheduleItem>>(null);
+  const lastAutoScrolledKey = useRef<string | null>(null);
   const weekStart = shiftWeekIsoDate(weekOffset);
   const { data: week, loading, error, refreshing, cacheAge, fromCache, refresh } = useBakalariSchedule({ date: weekStart, permanent });
 
@@ -36,15 +40,34 @@ export default function ScheduleScreen() {
     setSelectedDayKey((current) => current && week.days.some((day) => day.key === current) ? current : today?.key ?? week.days[0].key);
   }, [week]);
 
+  useEffect(() => {
+    if (permanent) return;
+    const timer = setInterval(() => setClockTick(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, [permanent]);
+
   const selectedDay = useMemo<ScheduleDay | null>(
     () => week?.days.find((day) => day.key === selectedDayKey) ?? week?.days[0] ?? null,
     [selectedDayKey, week],
   );
   const lessons = selectedDay?.lessons ?? [];
   const todayDay = week?.days.find((day) => day.date === todayIsoDate());
+  const currentTime = useMemo(() => new Date(clockTick), [clockTick]);
   const currentLessonId = !permanent && selectedDay?.date === todayIsoDate()
-    ? lessons.find((lesson) => isCurrentLesson(lesson.time))?.id
+    ? lessons.find((lesson) => isCurrentLesson(lesson.time, currentTime, lesson.endTime))?.id
     : undefined;
+  const currentLessonIndex = currentLessonId ? lessons.findIndex((lesson) => lesson.id === currentLessonId) : -1;
+
+  useEffect(() => {
+    if (!listReady || loading || currentLessonIndex < 0 || !selectedDay || permanent || !currentLessonId) return;
+    const scrollKey = `${weekStart}:${selectedDay.key}:${currentLessonId}`;
+    if (lastAutoScrolledKey.current === scrollKey) return;
+    lastAutoScrolledKey.current = scrollKey;
+    const timer = setTimeout(() => {
+      listRef.current?.scrollToIndex({ index: currentLessonIndex, animated: true, viewPosition: 0.28 });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [currentLessonId, currentLessonIndex, listReady, loading, permanent, selectedDay, weekStart]);
 
   const renderLesson = ({ item, index }: { item: ScheduleItem; index: number }) => {
     const active = item.id === currentLessonId;
@@ -98,11 +121,17 @@ export default function ScheduleScreen() {
   return (
     <ScreenContainer className="px-5" edges={["top", "left", "right"]}>
       <FlatList
+        ref={listRef}
         data={lessons}
         keyExtractor={(item) => item.id}
         renderItem={renderLesson}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
+        onContentSizeChange={() => setListReady(true)}
+        onScrollToIndexFailed={({ index, averageItemLength }) => {
+          listRef.current?.scrollToOffset({ offset: Math.max(0, index * averageItemLength), animated: true });
+          setTimeout(() => listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.28 }), 180);
+        }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} colors={[colors.primary]} />}
         ListHeaderComponent={
           <View>

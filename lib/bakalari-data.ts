@@ -148,12 +148,18 @@ export function shiftWeekIsoDate(weekOffset: number, date = new Date()): string 
   return isoDate(monday);
 }
 
-export function isCurrentLesson(time: string, now = new Date()): boolean {
+function minutesFromTime(time: string): number | null {
   const match = time.match(/^(\d{1,2}):(\d{2})/);
-  if (!match) return false;
-  const minutes = Number(match[1]) * 60 + Number(match[2]);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+export function isCurrentLesson(time: string, now = new Date(), endTime?: string): boolean {
+  const minutes = minutesFromTime(time);
+  if (minutes === null) return false;
   const current = now.getHours() * 60 + now.getMinutes();
-  return current >= minutes && current < minutes + 50;
+  const end = endTime ? minutesFromTime(endTime) : null;
+  return current >= minutes && current < (end ?? minutes + 50);
 }
 
 export function changeLabel(changeType: string | undefined): string | undefined {
@@ -217,6 +223,7 @@ export function normalizeTimetable(payload: BakalariTimetableResponse): Schedule
       return {
         id: `${date || "day"}-${atom.HourId ?? index}-${subjectId || index}`,
         time: hourLabel(hour, index + 1),
+        endTime: text(hour?.EndTime) || undefined,
         subject: text(subject?.Name) || text(subject?.Abbrev) || "Neurčený předmět",
         subjectAbbreviation: text(subject?.Abbrev) || undefined,
         teacher: text(teacher?.Name) || text(teacher?.Abbrev) || "",
