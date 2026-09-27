@@ -17,7 +17,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 
 import { BakalariApiError, normalizeSchoolUrl } from "../lib/bakalari-api";
 import { bakalariCache, formatCacheAge } from "../lib/bakalari-cache";
-import { calculateAverage, changeLabel, isCurrentLesson, normalizeHomework, normalizeMarks, normalizeTimetable, shiftWeekIsoDate, weekMondayIsoDate } from "../lib/bakalari-data";
+import { calculateAverage, changeLabel, getScheduleTimelineState, isCurrentLesson, normalizeHomework, normalizeMarks, normalizeTimetable, shiftWeekIsoDate, weekMondayIsoDate } from "../lib/bakalari-data";
 import { buildHomeworkReminderPlan } from "../lib/homework-notification-plan";
 import { nextTabPath } from "../lib/tab-navigation";
 
@@ -117,5 +117,15 @@ describe("schedule navigation helpers", () => {
     expect(isCurrentLesson("8:00", new Date("2026-09-26T09:00:00"))).toBe(false);
     expect(changeLabel("Substitution")).toBe("Změna učitele");
     expect(changeLabel("Removed")).toBe("Zrušená hodina");
+  });
+
+  it("calculates the current marker between the first and last lesson", () => {
+    const state = getScheduleTimelineState([
+      { id: "one", time: "8:00", endTime: "8:45", subject: "Matematika", teacher: "", room: "", color: "#000" },
+      { id: "two", time: "9:00", endTime: "9:45", subject: "Fyzika", teacher: "", room: "", color: "#000" },
+    ], new Date("2026-09-27T08:30:00"));
+    expect(state).toMatchObject({ startMinutes: 480, endMinutes: 585, currentLessonId: "one", isTeachingTime: true });
+    expect(state?.progress).toBeCloseTo(30 / 105, 5);
+    expect(getScheduleTimelineState([], new Date("2026-09-27T08:30:00"))).toBeNull();
   });
 });

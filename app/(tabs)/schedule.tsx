@@ -6,7 +6,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useBakalariSchedule } from "@/hooks/use-bakalari-data";
-import { changeLabel, isCurrentLesson, shiftWeekIsoDate, todayIsoDate, type ScheduleDay } from "@/lib/bakalari-data";
+import { changeLabel, getScheduleTimelineState, isCurrentLesson, minutesFromTime, shiftWeekIsoDate, todayIsoDate, type ScheduleDay, type ScheduleTimelineState } from "@/lib/bakalari-data";
 import type { ScheduleItem } from "@/shared/bakalari-data";
 
 function ping() {
@@ -19,6 +19,36 @@ function weekTitle(offset: number, permanent: boolean): string {
   if (offset === -1) return "Minulý týden";
   if (offset === 1) return "Příští týden";
   return offset > 0 ? `Za ${offset} týdny` : `${Math.abs(offset)} týdny zpět`;
+}
+
+function formatClock(date: Date): string {
+  return date.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatMinutes(value: number): string {
+  const hours = Math.floor(value / 60);
+  const minutes = String(Math.round(value % 60)).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
+function ScheduleTimeline({ state, now, colors, currentLesson }: { state: ScheduleTimelineState; now: Date; colors: ReturnType<typeof useColors>; currentLesson?: ScheduleItem }) {
+  const markerPosition = `${state.progress * 100}%` as `${number}%`;
+  return (
+    <View className="mb-4 rounded-2xl bg-surface p-4" style={styles.timelineCard}>
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center gap-2"><View style={[styles.liveDot, { backgroundColor: state.isTeachingTime ? colors.error : colors.muted }]} /><Text className="text-xs font-bold uppercase tracking-widest text-muted">{state.isTeachingTime ? "Probíhá výuka" : "Mimo výuku"}</Text></View>
+        <Text className="text-lg font-bold text-foreground">{formatClock(now)}</Text>
+      </View>
+      <View className="mt-4 px-1">
+        <View style={[styles.timelineTrack, { backgroundColor: colors.border }]}>
+          <View style={[styles.timelineElapsed, { width: markerPosition, backgroundColor: state.isTeachingTime ? colors.error : colors.primary }]} />
+          <View style={[styles.timelineMarker, { left: markerPosition, backgroundColor: state.isTeachingTime ? colors.error : colors.primary }]} />
+        </View>
+        <View className="mt-2 flex-row justify-between"><Text className="text-[10px] font-semibold text-muted">{formatMinutes(state.startMinutes)}</Text><Text className="text-[10px] font-semibold text-muted">{formatMinutes(state.endMinutes)}</Text></View>
+      </View>
+      {currentLesson ? <View className="mt-3 flex-row items-center justify-between rounded-xl px-3 py-2" style={{ backgroundColor: `${colors.error}12` }}><View className="flex-1"><Text className="text-xs font-bold text-foreground">Teď: {currentLesson.subject}</Text><Text className="mt-0.5 text-[10px] text-muted">{currentLesson.time}{currentLesson.endTime ? `–${currentLesson.endTime}` : ""} · {currentLesson.room}</Text></View><Text className="text-xs font-bold" style={{ color: colors.error }}>{Math.max(0, Math.ceil((minutesFromTime(currentLesson.endTime ?? "") ?? state.currentMinutes) - state.currentMinutes))} min</Text></View> : <Text className="mt-3 text-xs text-muted">Aktuální poloha se zobrazí během vyučování.</Text>}
+    </View>
+  );
 }
 
 export default function ScheduleScreen() {
@@ -57,6 +87,8 @@ export default function ScheduleScreen() {
     ? lessons.find((lesson) => isCurrentLesson(lesson.time, currentTime, lesson.endTime))?.id
     : undefined;
   const currentLessonIndex = currentLessonId ? lessons.findIndex((lesson) => lesson.id === currentLessonId) : -1;
+  const timelineState = !permanent && selectedDay?.date === todayIsoDate() ? getScheduleTimelineState(lessons, currentTime) : null;
+  const timelineLesson = timelineState?.currentLessonId ? lessons.find((lesson) => lesson.id === timelineState.currentLessonId) : undefined;
 
   useEffect(() => {
     if (!listReady || loading || currentLessonIndex < 0 || !selectedDay || permanent || !currentLessonId) return;
@@ -150,6 +182,7 @@ export default function ScheduleScreen() {
 
             {week?.days.length ? <View className="mt-5 flex-row justify-between rounded-2xl bg-surface p-2" style={styles.dayPicker}>{week.days.map((day) => { const active = day.key === (selectedDay?.key ?? selectedDayKey); return <Pressable key={`${day.key}-${day.date}`} onPress={() => { ping(); setSelectedDayKey(day.key); }} style={({ pressed }) => [styles.dayButton, active && [styles.dayButtonActive, { backgroundColor: colors.primary }], pressed && styles.pressed]}><Text className="text-xs font-semibold" style={{ color: active ? "#FFF" : colors.muted }}>{day.label}</Text><Text className="mt-1 text-base font-bold" style={{ color: active ? "#FFF" : colors.foreground }}>{day.date ? Number(day.date.split("-")[2]) : "—"}</Text>{day.date === todayDay?.date ? <Text className="mt-0.5 text-[9px] font-bold" style={{ color: active ? "#FFF" : colors.primary }}>dnes</Text> : null}</Pressable>; })}</View> : null}
             <View className="mb-4 mt-7 flex-row items-center justify-between"><View className="flex-1"><Text className="text-xl font-bold text-foreground">{selectedDay?.label ?? "Dnes"} {selectedDay?.dateLabel ?? ""}</Text>{selectedDay?.description ? <Text className="mt-1 text-xs font-semibold text-warning">{selectedDay.description}</Text> : null}</View><Text className="text-sm font-semibold text-muted">{loading ? "…" : `${lessons.length} ${lessons.length === 1 ? "hodina" : "hodin"}`}</Text></View>
+            {timelineState ? <ScheduleTimeline state={timelineState} now={currentTime} colors={colors} currentLesson={timelineLesson} /> : null}
           </View>
         }
         ListEmptyComponent={emptyState}
@@ -165,6 +198,11 @@ export default function ScheduleScreen() {
 
 const styles = StyleSheet.create({
   listContent: { paddingBottom: 24 },
+  timelineCard: { shadowColor: "#172033", shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
+  liveDot: { width: 8, height: 8, borderRadius: 4 },
+  timelineTrack: { height: 6, borderRadius: 3, position: "relative" },
+  timelineElapsed: { position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: 3 },
+  timelineMarker: { position: "absolute", top: -5, width: 16, height: 16, borderRadius: 8, marginLeft: -8, borderWidth: 3, borderColor: "#FFFFFF" },
   weekSwitcher: { shadowColor: "#172033", shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   weekArrow: { width: 38, height: 38, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   weekTitle: { flex: 1, alignItems: "center", paddingVertical: 4 },

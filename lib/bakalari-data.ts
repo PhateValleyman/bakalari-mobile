@@ -148,10 +148,38 @@ export function shiftWeekIsoDate(weekOffset: number, date = new Date()): string 
   return isoDate(monday);
 }
 
-function minutesFromTime(time: string): number | null {
+export function minutesFromTime(time: string): number | null {
   const match = time.match(/^(\d{1,2}):(\d{2})/);
   if (!match) return null;
   return Number(match[1]) * 60 + Number(match[2]);
+}
+
+export type ScheduleTimelineState = {
+  startMinutes: number;
+  endMinutes: number;
+  currentMinutes: number;
+  progress: number;
+  currentLessonId?: string;
+  isTeachingTime: boolean;
+};
+
+export function getScheduleTimelineState(lessons: ScheduleItem[], now = new Date()): ScheduleTimelineState | null {
+  if (!lessons.length) return null;
+  const starts = lessons.map((lesson) => minutesFromTime(lesson.time)).filter((value): value is number => value !== null);
+  if (!starts.length) return null;
+  const startMinutes = Math.min(...starts);
+  const endMinutes = Math.max(...lessons.map((lesson, index) => minutesFromTime(lesson.endTime ?? "") ?? starts[index] + 50));
+  const currentMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+  const progress = Math.max(0, Math.min(1, (currentMinutes - startMinutes) / Math.max(1, endMinutes - startMinutes)));
+  const currentLessonId = lessons.find((lesson) => isCurrentLesson(lesson.time, now, lesson.endTime))?.id;
+  return {
+    startMinutes,
+    endMinutes,
+    currentMinutes,
+    progress,
+    currentLessonId,
+    isTeachingTime: currentMinutes >= startMinutes && currentMinutes <= endMinutes,
+  };
 }
 
 export function isCurrentLesson(time: string, now = new Date(), endTime?: string): boolean {
