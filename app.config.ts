@@ -1,7 +1,7 @@
 // Load environment variables with proper priority (system > .env)
 import "./scripts/load-env.js";
 import type { ExpoConfig } from "expo/config";
-import { withProjectBuildGradle, type ConfigPlugin } from "expo/config-plugins";
+import { withAppBuildGradle, type ConfigPlugin } from "expo/config-plugins";
 
 // Bundle ID format: space.manus.<project_name_dots>.<timestamp>
 // e.g., "my-app" created at 2024-01-15 10:30:45 -> "space.manus.my.app.t20240115103045"
@@ -40,24 +40,24 @@ const env = {
 };
 
 const withAndroidNdkVersion: ConfigPlugin = (config) =>
-  withProjectBuildGradle(config, (project) => {
-    if (project.modResults.language !== "groovy") {
-      throw new Error("Bakaláři Mobile requires a Groovy android/build.gradle file.");
+  withAppBuildGradle(config, (app) => {
+    if (app.modResults.language !== "groovy") {
+      throw new Error("Bakaláři Mobile requires a Groovy android/app/build.gradle file.");
     }
 
     const ndkVersion = "29.0.14206865";
-    const ndkPattern = /ndkVersion\\s*=\\s*[^\\n]+/;
+    const ndkPattern = /ndkVersion\\s+rootProject\\.ext\\.ndkVersion/;
 
-    if (ndkPattern.test(project.modResults.contents)) {
-      project.modResults.contents = project.modResults.contents.replace(
+    if (ndkPattern.test(app.modResults.contents)) {
+      app.modResults.contents = app.modResults.contents.replace(
         ndkPattern,
-        `ndkVersion = "${ndkVersion}"`
+        `ndkVersion "${ndkVersion}"`
       );
-    } else {
-      throw new Error("Bakaláři Mobile could not find the Android NDK version in android/build.gradle.");
+    } else if (!app.modResults.contents.includes(`ndkVersion "${ndkVersion}"`)) {
+      throw new Error("Bakaláři Mobile could not find the Android NDK configuration in android/app/build.gradle.");
     }
 
-    return project;
+    return app;
   });
 
 const config: ExpoConfig = {
