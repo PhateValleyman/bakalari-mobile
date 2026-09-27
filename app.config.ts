@@ -48,9 +48,9 @@ const withAndroidNdkVersion: ConfigPlugin = (config) =>
     if (!project.modResults.contents.includes(marker)) {
       project.modResults.contents = project.modResults.contents.replace(
         'apply plugin: "com.facebook.react.rootproject"',
-        'apply plugin: "com.facebook.react.rootproject"\\n\\n' +
+        'apply plugin: "com.facebook.react.rootproject"\n\n' +
           marker +
-          '\\ext.ndkVersion = "29.0.14206865"'
+          '\next.ndkVersion = "29.0.14206865"'
       );
     }
     return project;
