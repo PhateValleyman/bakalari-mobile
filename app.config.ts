@@ -1,6 +1,6 @@
 // Load environment variables with proper priority (system > .env)
 import "./scripts/load-env.js";
-import type { ExpoConfig, ConfigContext } from "expo/config";
+import type { ExpoConfig } from "expo/config";
 import { withProjectBuildGradle, type ConfigPlugin } from "expo/config-plugins";
 
 // Bundle ID format: space.manus.<project_name_dots>.<timestamp>
@@ -50,7 +50,7 @@ const withAndroidNdkVersion: ConfigPlugin = (config) =>
         'apply plugin: "com.facebook.react.rootproject"',
         'apply plugin: "com.facebook.react.rootproject"\\n\\n' +
           marker +
-          '\\next.ndkVersion = "29.0.14206865"'
+          '\\ext.ndkVersion = "29.0.14206865"'
       );
     }
     return project;
