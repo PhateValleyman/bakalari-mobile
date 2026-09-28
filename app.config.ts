@@ -67,6 +67,11 @@ const config: ExpoConfig = {
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: env.scheme,
+  extra: {
+    eas: {
+      projectId: "010c69e4-2210-435a-8cfc-d53470ec4431",
+    },
+  },
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   ios: {
