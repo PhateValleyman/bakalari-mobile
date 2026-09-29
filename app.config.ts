@@ -1,6 +1,7 @@
 // Load environment variables with proper priority (system > .env)
 import "./scripts/load-env.js";
 import type { ExpoConfig } from "expo/config";
+import { withAppBuildGradle, type ConfigPlugin } from "expo/config-plugins";
 
 // Bundle ID format: space.manus.<project_name_dots>.<timestamp>
 // e.g., "my-app" created at 2024-01-15 10:30:45 -> "space.manus.my.app.t20240115103045"
@@ -38,6 +39,27 @@ const env = {
   androidPackage: bundleId,
 };
 
+const withAndroidNdkVersion: ConfigPlugin = (config) =>
+  withAppBuildGradle(config, (app) => {
+    if (app.modResults.language !== "groovy") {
+      throw new Error("Bakaláři Mobile requires a Groovy android/app/build.gradle file.");
+    }
+
+    const ndkVersion = "29.0.14206865";
+    const ndkPattern = /ndkVersion\\s+rootProject\\.ext\\.ndkVersion/;
+
+    if (ndkPattern.test(app.modResults.contents)) {
+      app.modResults.contents = app.modResults.contents.replace(
+        ndkPattern,
+        `ndkVersion "${ndkVersion}"`
+      );
+    } else if (!app.modResults.contents.includes(`ndkVersion "${ndkVersion}"`)) {
+      throw new Error("Bakaláři Mobile could not find the Android NDK configuration in android/app/build.gradle.");
+    }
+
+    return app;
+  });
+
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
@@ -45,6 +67,11 @@ const config: ExpoConfig = {
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: env.scheme,
+  extra: {
+    eas: {
+      projectId: "010c69e4-2210-435a-8cfc-d53470ec4431",
+    },
+  },
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   ios: {
@@ -86,6 +113,7 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    withAndroidNdkVersion as unknown as NonNullable<ExpoConfig["plugins"]>[number],
     [
       "expo-audio",
       {
