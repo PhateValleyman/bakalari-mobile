@@ -46,16 +46,33 @@ const withAndroidNdkVersion: ConfigPlugin = (config) =>
     }
 
     const ndkVersion = "29.0.14206865";
-    const ndkPattern = /ndkVersion\\s+rootProject\\.ext\\.ndkVersion/;
+    const contents = app.modResults.contents;
+    const ndkVersionDeclaration = `ndkVersion "${ndkVersion}"`;
 
-    if (ndkPattern.test(app.modResults.contents)) {
-      app.modResults.contents = app.modResults.contents.replace(
-        ndkPattern,
-        `ndkVersion "${ndkVersion}"`
+    // Replace Expo/React Native's generated root-project NDK reference when present.
+    if (/ndkVersion\s+rootProject\.ext\.ndkVersion/.test(contents)) {
+      app.modResults.contents = contents.replace(
+        /ndkVersion\s+rootProject\.ext\.ndkVersion/,
+        ndkVersionDeclaration
       );
-    } else if (!app.modResults.contents.includes(`ndkVersion "${ndkVersion}"`)) {
-      throw new Error("Bakaláři Mobile could not find the Android NDK configuration in android/app/build.gradle.");
+      return app;
     }
+
+    // Keep an existing explicit NDK version untouched when it already matches the required version.
+    if (contents.includes(ndkVersionDeclaration)) {
+      return app;
+    }
+
+    // Add the required NDK version to the generated android { } block after a clean prebuild.
+    const androidBlock = /android\s*\{/;
+    if (!androidBlock.test(contents)) {
+      throw new Error("Bakaláři Mobile could not find the Android configuration block in android/app/build.gradle.");
+    }
+
+    app.modResults.contents = contents.replace(
+      androidBlock,
+      (match) => `${match}\n    ${ndkVersionDeclaration}`
+    );
 
     return app;
   });
@@ -78,8 +95,8 @@ const config: ExpoConfig = {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
     "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+      "ITSAppUsesNonExemptEncryption": false,
+    },
   },
   android: {
     adaptiveIcon: {
@@ -88,7 +105,6 @@ const config: ExpoConfig = {
       backgroundImage: "./assets/images/android-icon-background.png",
       monochromeImage: "./assets/images/android-icon-monochrome.png",
     },
-    edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: env.androidPackage,
     permissions: ["POST_NOTIFICATIONS"],
@@ -133,32 +149,7 @@ const config: ExpoConfig = {
         supportsPictureInPicture: true,
       },
     ],
-    [
-      "expo-splash-screen",
-      {
-        image: "./assets/images/splash-icon.png",
-        imageWidth: 200,
-        resizeMode: "contain",
-        backgroundColor: "#ffffff",
-        dark: {
-          backgroundColor: "#000000",
-        },
-      },
-    ],
-    [
-      "expo-build-properties",
-      {
-        android: {
-          buildArchs: ["armeabi-v7a", "arm64-v8a"],
-          minSdkVersion: 24,
-        },
-      },
-    ],
   ],
-  experiments: {
-    typedRoutes: true,
-    reactCompiler: true,
-  },
 };
 
 export default config;
