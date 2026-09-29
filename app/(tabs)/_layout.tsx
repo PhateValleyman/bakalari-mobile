@@ -58,6 +58,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={23} name="checklist" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Nastavení",
+          tabBarIcon: ({ color }) => <IconSymbol size={23} name="settings" color={color} />,
+        }}
+      />
     </Tabs>
   );
 }

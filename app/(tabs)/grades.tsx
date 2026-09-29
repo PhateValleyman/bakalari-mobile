@@ -79,6 +79,8 @@ export default function GradesScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderGrade}
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={() => { ping(); refresh(); }}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View>

@@ -6,7 +6,7 @@ import { ActivityIndicator, Alert, FlatList, Platform, Pressable, StyleSheet, Te
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-import { useBakalariGrades, useBakalariSchedule } from "@/hooks/use-bakalari-data";
+import { useBakalariGrades, useBakalariHomeworks, useBakalariSchedule } from "@/hooks/use-bakalari-data";
 import { useAuthState } from "@/lib/auth-context";
 import { calculateAverage, todayIsoDate } from "@/lib/bakalari-data";
 import type { ScheduleItem } from "@/shared/bakalari-data";
@@ -20,11 +20,13 @@ function ping() {
 export default function HomeScreen() {
   const colors = useColors();
   const { user, signOut } = useAuthState();
-  const { data: week, loading: scheduleLoading, error: scheduleError } = useBakalariSchedule();
-  const { data: grades, loading: gradesLoading } = useBakalariGrades();
+  const { data: week, loading: scheduleLoading, refreshing: scheduleRefreshing, error: scheduleError, refresh: refreshSchedule } = useBakalariSchedule();
+  const { data: grades, loading: gradesLoading, refreshing: gradesRefreshing, refresh: refreshGrades } = useBakalariGrades();
+  const { data: homeworks, loading: homeworkLoading, refreshing: homeworkRefreshing, refresh: refreshHomeworks } = useBakalariHomeworks();
   const todayIso = todayIsoDate();
   const today = week?.days.find((day) => day.date === todayIso) ?? week?.days[0];
   const todaysSchedule = today?.lessons ?? [];
+  const openHomework = homeworks.filter((item) => !item.completed).length;
   const average = useMemo(() => calculateAverage(grades), [grades]);
   const displayName = user?.name ? user.name.charAt(0).toUpperCase() + user.name.slice(1) : "Student";
   const initials = displayName.slice(0, 2).toUpperCase();
@@ -73,6 +75,8 @@ export default function HomeScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderScheduleItem}
         showsVerticalScrollIndicator={false}
+        refreshing={scheduleRefreshing || gradesRefreshing || homeworkRefreshing}
+        onRefresh={() => { ping(); refreshSchedule(); refreshGrades(); refreshHomeworks(); }}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View>
@@ -128,8 +132,8 @@ export default function HomeScreen() {
                   <Text className="text-xs font-semibold text-muted">Úkoly</Text>
                   <IconSymbol name="checklist" size={18} color="#F0A33A" />
                 </View>
-                <Text className="mt-2 text-2xl font-bold text-foreground">—</Text>
-                <Text className="mt-1 text-xs font-semibold text-warning">úkoly zatím nejsou napojené</Text>
+                <Text className="mt-2 text-2xl font-bold text-foreground">{homeworkLoading ? "…" : openHomework}</Text>
+                <Text className="mt-1 text-xs font-semibold text-warning">otevřené úkoly z API</Text>
               </View>
             </View>
 

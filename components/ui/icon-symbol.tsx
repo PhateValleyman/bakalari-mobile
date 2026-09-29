@@ -31,6 +31,7 @@ const MAPPING = {
   "trending.up": "trending-up",
   "trending.down": "trending-down",
   "minus": "remove",
+  "settings": "settings",
 } as const satisfies Record<string, ComponentProps<typeof MaterialIcons>["name"]>;
 
 export function IconSymbol({
