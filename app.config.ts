@@ -149,7 +149,32 @@ const config: ExpoConfig = {
         supportsPictureInPicture: true,
       },
     ],
+    [
+      "expo-splash-screen",
+      {
+        image: "./assets/images/splash-icon.png",
+        imageWidth: 200,
+        resizeMode: "contain",
+        backgroundColor: "#ffffff",
+        dark: {
+          backgroundColor: "#000000",
+        },
+      },
+    ],
+    [
+      "expo-build-properties",
+      {
+        android: {
+          buildArchs: ["armeabi-v7a", "arm64-v8a"],
+          minSdkVersion: 24,
+        },
+      },
+    ],
   ],
+  experiments: {
+    typedRoutes: true,
+    reactCompiler: true,
+  },
 };
 
 export default config;
