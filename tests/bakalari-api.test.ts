@@ -17,7 +17,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 
 import { BakalariApiError, normalizeSchoolUrl } from "../lib/bakalari-api";
 import { bakalariCache, formatCacheAge } from "../lib/bakalari-cache";
-import { calculateAverage, normalizeMarks, normalizeTimetable } from "../lib/bakalari-data";
+import { calculateAverage, normalizeHomeworks, normalizeMarks, normalizeTimetable } from "../lib/bakalari-data";
 
 describe("normalizeSchoolUrl", () => {
   it("adds https and removes a trailing slash", () => {
@@ -72,5 +72,12 @@ describe("offline cache", () => {
   it("formats cache age for the UI", () => {
     expect(formatCacheAge(Date.now())).toBe("právě teď");
     expect(formatCacheAge(null)).toBeNull();
+  });
+});
+
+describe("homework normalization", () => {
+  it("normalizes API homework fields and due labels", () => {
+    const homeworks = normalizeHomeworks({ Homeworks: [{ Id: "H1", Subject: { Id: "S1", Name: "Matematika" }, Title: "Procvičit funkce", DueDate: "2099-01-02T12:00:00Z", Done: false }] });
+    expect(homeworks[0]).toMatchObject({ id: "H1", subject: "Matematika", title: "Procvičit funkce", due: "2099-01-02", completed: false });
   });
 });

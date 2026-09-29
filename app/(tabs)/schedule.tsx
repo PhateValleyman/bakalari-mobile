@@ -17,7 +17,7 @@ function ping() {
 
 export default function ScheduleScreen() {
   const colors = useColors();
-  const { data: week, loading, error, refreshing, cacheAge, fromCache, refresh } = useBakalariSchedule();
+  const { data: week, loading, refreshing, error, cacheAge, fromCache, refresh } = useBakalariSchedule();
   const [selectedDayKey, setSelectedDayKey] = useState("");
 
   useEffect(() => {
@@ -88,6 +88,8 @@ export default function ScheduleScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderLesson}
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={() => { ping(); refresh(); }}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View>

@@ -32,13 +32,19 @@ const MAPPING = {
   "trending.down": "trending-down",
   "minus": "remove",
   "settings": "settings",
-  "event.busy": "event-busy",
-  "warning": "warning",
-  "bubble.left.fill": "chat-bubble",
-  "bubble.left.and.bubble.right.fill": "forum",
-  "paperclip": "attach-file",
 } as const satisfies Record<string, ComponentProps<typeof MaterialIcons>["name"]>;
 
-export function IconSymbol({ name, size = 24, color, style }: { name: IconSymbolName; size?: number; color: string | OpaqueColorValue; style?: StyleProp<TextStyle>; weight?: SymbolWeight }) {
+export function IconSymbol({
+  name,
+  size = 24,
+  color,
+  style,
+}: {
+  name: IconSymbolName;
+  size?: number;
+  color: string | OpaqueColorValue;
+  style?: StyleProp<TextStyle>;
+  weight?: SymbolWeight;
+}) {
   return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
 }

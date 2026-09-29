@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 
@@ -6,8 +6,6 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useAuthState } from "@/lib/auth-context";
-import { bakalariCache } from "@/lib/bakalari-cache";
-import { cancelHomeworkReminders, getRemindersEnabled, requestReminderPermission, setRemindersEnabled, syncHomeworkReminders } from "@/lib/homework-reminders";
 import { exportLocalBackup, importLocalBackup } from "@/lib/local-backup";
 import { THEME_STORAGE_KEY, useThemeContext } from "@/lib/theme-provider";
 
@@ -16,21 +14,6 @@ export default function SettingsScreen() {
   const { colorScheme, setColorScheme } = useThemeContext();
   const { user, signOut } = useAuthState();
   const [busy, setBusy] = useState(false);
-  const [reminders, setReminders] = useState(false);
-
-  useEffect(() => { void getRemindersEnabled().then(setReminders); }, []);
-
-  const toggleReminders = async (value: boolean) => {
-    if (!value) { setReminders(false); await setRemindersEnabled(false); await cancelHomeworkReminders(); return; }
-    const permission = await requestReminderPermission();
-    if (permission !== "granted") {
-      Alert.alert(permission === "unsupported" ? "Nepodporováno" : "Oznámení jsou zakázána", permission === "unsupported" ? "Lokální upozornění fungují jen v mobilní aplikaci." : "Povol oznámení pro Bakaláře v nastavení telefonu.");
-      return;
-    }
-    setReminders(true); await setRemindersEnabled(true);
-    const cached = user?.schoolUrl ? await bakalariCache.readHomeworks(user.schoolUrl) : null;
-    if (cached) await syncHomeworkReminders(cached.data);
-  };
 
   const runBackup = async (action: () => Promise<void>, success: string) => {
     setBusy(true);
@@ -58,11 +41,6 @@ export default function SettingsScreen() {
 
         <View className="mt-6 overflow-hidden rounded-3xl bg-surface" style={styles.card}>
           <View className="flex-row items-center gap-3 p-4"><View className="rounded-xl p-2" style={{ backgroundColor: `${colors.primary}18` }}><IconSymbol name="settings" size={21} color={colors.primary} /></View><View className="flex-1"><Text className="text-base font-bold text-foreground">Vzhled aplikace</Text><Text className="mt-1 text-xs text-muted">Aktuálně: {colorScheme === "dark" ? "tmavé téma" : "světlé téma"}</Text></View><Switch value={colorScheme === "dark"} onValueChange={(value) => setColorScheme(value ? "dark" : "light")} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#FFFFFF" /></View>
-        </View>
-
-        <Text className="mb-3 mt-7 text-xl font-bold text-foreground">Upozornění</Text>
-        <View className="overflow-hidden rounded-3xl bg-surface" style={styles.card}>
-          <View className="flex-row items-center gap-3 p-4"><View className="rounded-xl p-2" style={{ backgroundColor: `${colors.primary}18` }}><IconSymbol name="bell.fill" size={21} color={colors.primary} /></View><View className="flex-1"><Text className="text-base font-bold text-foreground">Termíny úkolů</Text><Text className="mt-1 text-xs leading-5 text-muted">Připomene nedokončené úkoly den předem v 18:00 a v den termínu v 7:00.</Text></View><Switch value={reminders} onValueChange={(value) => { void toggleReminders(value); }} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#FFFFFF" /></View>
         </View>
 
         <Text className="mb-3 mt-7 text-xl font-bold text-foreground">Lokální záloha</Text>
