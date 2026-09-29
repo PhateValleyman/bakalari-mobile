@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { errorMessage, fetchActualTimetable, fetchHomeworks, fetchMarks, type ScheduleWeek } from "@/lib/bakalari-data";
+import { errorMessage, fetchAbsence, fetchActualTimetable, fetchHomeworks, fetchMarks, type ScheduleWeek } from "@/lib/bakalari-data";
 import { bakalariCache, formatCacheAge } from "@/lib/bakalari-cache";
 import { useAuthState } from "@/lib/auth-context";
 import { syncHomeworkReminders } from "@/lib/homework-reminders";
-import type { Grade, Homework } from "@/shared/bakalari-data";
+import type { AbsenceSummary, Grade, Homework } from "@/shared/bakalari-data";
 
 type CacheState = { savedAt: number | null; source: "cache" | "network" | null };
 const emptyCacheState: CacheState = { savedAt: null, source: null };
@@ -26,4 +26,10 @@ export function useBakalariHomeworks() {
   useEffect(() => { let active = true; let networkResolved = false; const schoolUrl = user?.schoolUrl; const isManualRefresh = reloadKey > 0; if (!schoolUrl) { setData([]); setLoading(false); setRefreshing(false); setError("Školní účet není připojený."); setCacheState(emptyCacheState); return () => { active = false; }; } setLoading(!isManualRefresh); setRefreshing(isManualRefresh); setError(null); setCacheState(emptyCacheState); void bakalariCache.readHomeworks(schoolUrl).then((cached) => { if (!active || networkResolved || !cached) return; setData(cached.data); setLoading(false); setCacheState({ savedAt: cached.savedAt, source: "cache" }); }); void fetchHomeworks(schoolUrl).then(async (nextData) => { networkResolved = true; await bakalariCache.writeHomeworks(schoolUrl, nextData); void syncHomeworkReminders(nextData); if (!active) return; setData(nextData); setCacheState({ savedAt: Date.now(), source: "network" }); setError(null); }).catch((reason) => { networkResolved = true; if (active) setError(errorMessage(reason)); }).finally(() => { if (active) { setLoading(false); setRefreshing(false); } }); return () => { active = false; }; }, [user?.schoolUrl, reloadKey]);
   const save = useCallback(async (nextData: Homework[]) => { if (!user?.schoolUrl) return; setData(nextData); await bakalariCache.writeHomeworks(user.schoolUrl, nextData); void syncHomeworkReminders(nextData); }, [user?.schoolUrl]);
   return { data, loading, refreshing, error, cacheAge: formatCacheAge(cacheState.savedAt), fromCache: cacheState.source === "cache", save, refresh: () => { setRefreshing(true); refresh(); } };
+}
+
+export function useBakalariAbsence() {
+  const { user } = useAuthState(); const [data, setData] = useState<AbsenceSummary | null>(null); const [loading, setLoading] = useState(true); const [refreshing, setRefreshing] = useState(false); const [error, setError] = useState<string | null>(null); const [cacheState, setCacheState] = useState<CacheState>(emptyCacheState); const [reloadKey, setReloadKey] = useState(0); const refresh = useCallback(() => setReloadKey((key) => key + 1), []);
+  useEffect(() => { let active = true; let networkResolved = false; const schoolUrl = user?.schoolUrl; const isManualRefresh = reloadKey > 0; if (!schoolUrl) { setData(null); setLoading(false); setRefreshing(false); setError("Školní účet není připojený."); setCacheState(emptyCacheState); return () => { active = false; }; } setLoading(!isManualRefresh); setRefreshing(isManualRefresh); setError(null); setCacheState(emptyCacheState); void bakalariCache.readAbsence(schoolUrl).then((cached) => { if (!active || networkResolved || !cached) return; setData(cached.data); setLoading(false); setCacheState({ savedAt: cached.savedAt, source: "cache" }); }); void fetchAbsence(schoolUrl).then(async (nextData) => { networkResolved = true; await bakalariCache.writeAbsence(schoolUrl, nextData); if (!active) return; setData(nextData); setCacheState({ savedAt: Date.now(), source: "network" }); setError(null); }).catch((reason) => { networkResolved = true; if (active) setError(errorMessage(reason)); }).finally(() => { if (active) { setLoading(false); setRefreshing(false); } }); return () => { active = false; }; }, [user?.schoolUrl, reloadKey]);
+  return { data, loading, refreshing, error, cacheAge: formatCacheAge(cacheState.savedAt), fromCache: cacheState.source === "cache", refresh: () => { setRefreshing(true); refresh(); } };
 }

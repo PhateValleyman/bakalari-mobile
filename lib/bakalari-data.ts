@@ -1,5 +1,5 @@
 import { bakalariFetch } from "./bakalari-api";
-import type { Grade, Homework, ScheduleItem } from "../shared/bakalari-data";
+import type { AbsenceDay, AbsenceSubject, AbsenceSummary, Grade, Homework, ScheduleItem } from "../shared/bakalari-data";
 
 export type BakalariEntity = {
   Id?: string | number;
@@ -108,3 +108,24 @@ export async function fetchHomeworks(schoolUrl: string): Promise<Homework[]> { c
 
 export function calculateAverage(grades: Grade[]): string { const values = grades.map((grade) => parseAverage(grade.average)).filter((value): value is number => value !== null); if (!values.length) return "—"; return (values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2).replace(".", ","); }
 export function errorMessage(error: unknown): string { return error instanceof Error ? error.message : "Data se nepodařilo načíst."; }
+
+type BakalariAbsenceDay = { Date?: string; Unsolved?: number; Ok?: number; Missed?: number; Late?: number; Soon?: number; School?: number };
+type BakalariAbsenceSubject = { SubjectName?: string; LessonsCount?: number; Base?: number; Absence?: number; Late?: number; Soon?: number; School?: number };
+type BakalariAbsenceResponse = { Absences?: BakalariAbsenceDay[]; AbsencesPerSubject?: BakalariAbsenceSubject[]; PercentageThreshold?: number };
+
+function count(value: unknown): number { const parsed = Number(value); return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 0; }
+export function normalizeAbsence(payload: BakalariAbsenceResponse): AbsenceSummary {
+  const days = (payload.Absences ?? []).map((day) => {
+    const date = datePart(day.Date);
+    return { date, dateLabel: formatDate(date), ok: count(day.Ok), missed: count(day.Missed), late: count(day.Late), soon: count(day.Soon), school: count(day.School), unsolved: count(day.Unsolved) } satisfies AbsenceDay;
+  }).filter((day) => day.ok + day.missed + day.late + day.soon + day.school + day.unsolved > 0).sort((left, right) => right.date.localeCompare(left.date));
+  const subjects = (payload.AbsencesPerSubject ?? []).map((entry, index) => {
+    const name = text(entry.SubjectName) || "Neurčený předmět"; const lessons = count(entry.Base) || count(entry.LessonsCount); const absence = count(entry.Absence);
+    return { id: `${index}-${name}`, subject: name, lessons, absence, late: count(entry.Late), soon: count(entry.Soon), school: count(entry.School), percent: lessons ? Math.round((absence / lessons) * 1000) / 10 : 0, color: colorForSubject(name) } satisfies AbsenceSubject;
+  }).sort((left, right) => right.percent - left.percent || left.subject.localeCompare(right.subject, "cs"));
+  const threshold = Number(payload.PercentageThreshold);
+  const thresholdPercent = Number.isFinite(threshold) && threshold > 0 ? (threshold <= 1 ? Math.round(threshold * 1000) / 10 : threshold) : null;
+  const totals = days.reduce((sum, day) => ({ ok: sum.ok + day.ok, missed: sum.missed + day.missed, late: sum.late + day.late, soon: sum.soon + day.soon, school: sum.school + day.school, unsolved: sum.unsolved + day.unsolved }), { ok: 0, missed: 0, late: 0, soon: 0, school: 0, unsolved: 0 });
+  return { days, subjects, thresholdPercent, totals };
+}
+export async function fetchAbsence(schoolUrl: string): Promise<AbsenceSummary> { const payload = await bakalariFetch<BakalariAbsenceResponse>(schoolUrl, "/api/3/absence/student"); return normalizeAbsence(payload); }

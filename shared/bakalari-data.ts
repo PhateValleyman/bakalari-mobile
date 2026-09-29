@@ -32,6 +32,36 @@ export type Homework = {
   completed: boolean;
 };
 
+export type AbsenceDay = {
+  date: string;
+  dateLabel: string;
+  ok: number; // excused
+  missed: number; // unexcused
+  late: number;
+  soon: number; // left early
+  school: number; // school-related absence
+  unsolved: number; // not yet excused
+};
+
+export type AbsenceSubject = {
+  id: string;
+  subject: string;
+  lessons: number;
+  absence: number;
+  late: number;
+  soon: number;
+  school: number;
+  percent: number; // share of missed lessons, 0-100
+  color: string;
+};
+
+export type AbsenceSummary = {
+  days: AbsenceDay[];
+  subjects: AbsenceSubject[];
+  thresholdPercent: number | null;
+  totals: { ok: number; missed: number; late: number; soon: number; school: number; unsolved: number };
+};
+
 export const weekDays = [
   { key: "mon", label: "Po", date: "21" },
   { key: "tue", label: "Út", date: "22" },

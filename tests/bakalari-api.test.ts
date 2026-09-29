@@ -102,3 +102,30 @@ describe("homework reminder plan", () => {
     expect(plan).toEqual([]);
   });
 });
+
+import { normalizeAbsence } from "../lib/bakalari-data";
+
+describe("absence normalization", () => {
+  it("sums days, ranks subjects by missed share and reads the threshold", () => {
+    const summary = normalizeAbsence({
+      PercentageThreshold: 0.2,
+      Absences: [
+        { Date: "2026-09-10T00:00:00+02:00", Ok: 4, Missed: 0, Late: 0, Soon: 0, School: 0, Unsolved: 0 },
+        { Date: "2026-09-22T00:00:00+02:00", Ok: 0, Missed: 2, Late: 1, Soon: 0, School: 0, Unsolved: 2 },
+        { Date: "2026-09-23T00:00:00+02:00" },
+      ],
+      AbsencesPerSubject: [
+        { SubjectName: "Matematika", LessonsCount: 40, Base: 40, Absence: 4 },
+        { SubjectName: "Fyzika", LessonsCount: 10, Base: 10, Absence: 3 },
+      ],
+    });
+    expect(summary.days.map((day) => day.date)).toEqual(["2026-09-22", "2026-09-10"]);
+    expect(summary.totals).toMatchObject({ ok: 4, missed: 2, late: 1, unsolved: 2 });
+    expect(summary.subjects[0]).toMatchObject({ subject: "Fyzika", percent: 30 });
+    expect(summary.thresholdPercent).toBe(20);
+  });
+
+  it("tolerates an empty payload", () => {
+    expect(normalizeAbsence({})).toMatchObject({ days: [], subjects: [], thresholdPercent: null });
+  });
+});

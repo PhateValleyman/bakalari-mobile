@@ -59,6 +59,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="absence"
+        options={{
+          title: "Absence",
+          tabBarIcon: ({ color }) => <IconSymbol size={23} name="event.busy" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: "Nastavení",

@@ -32,6 +32,8 @@ const MAPPING = {
   "trending.down": "trending-down",
   "minus": "remove",
   "settings": "settings",
+  "event.busy": "event-busy",
+  "warning": "warning",
 } as const satisfies Record<string, ComponentProps<typeof MaterialIcons>["name"]>;
 
 export function IconSymbol({
