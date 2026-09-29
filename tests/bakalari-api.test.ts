@@ -81,3 +81,24 @@ describe("homework normalization", () => {
     expect(homeworks[0]).toMatchObject({ id: "H1", subject: "Matematika", title: "Procvičit funkce", due: "2099-01-02", completed: false });
   });
 });
+
+import { planHomeworkReminders } from "../lib/homework-reminder-plan";
+
+describe("homework reminder plan", () => {
+  const base = { subject: "Matematika", title: "Funkce", dueLabel: "", color: "#000" };
+  const now = new Date(2026, 8, 30, 12, 0, 0);
+
+  it("schedules an eve and a morning reminder for open future tasks", () => {
+    const plan = planHomeworkReminders([{ ...base, id: "a", due: "2026-10-02", completed: false }], now);
+    expect(plan.map((item) => [item.kind, item.at.getDate(), item.at.getHours()])).toEqual([["eve", 1, 18], ["morning", 2, 7]]);
+  });
+
+  it("skips completed tasks, missing deadlines and reminders in the past", () => {
+    const plan = planHomeworkReminders([
+      { ...base, id: "done", due: "2026-10-02", completed: true },
+      { ...base, id: "none", due: "", completed: false },
+      { ...base, id: "today", due: "2026-09-30", completed: false },
+    ], now);
+    expect(plan).toEqual([]);
+  });
+});

@@ -113,6 +113,12 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    [
+      "expo-notifications",
+      {
+        color: "#2F7DF6",
+      },
+    ],
     withAndroidNdkVersion as unknown as NonNullable<ExpoConfig["plugins"]>[number],
     [
       "expo-audio",

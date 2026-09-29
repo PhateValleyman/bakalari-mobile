@@ -9,6 +9,7 @@ import { Platform } from "react-native";
 import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { AuthProvider } from "@/lib/auth-context";
+import { configureNotifications } from "@/lib/homework-reminders";
 import {
   SafeAreaFrameContext,
   SafeAreaInsetsContext,
@@ -37,6 +38,7 @@ export default function RootLayout() {
   // Initialize Manus runtime for cookie injection from parent container
   useEffect(() => {
     initManusRuntime();
+    configureNotifications();
   }, []);
 
   const handleSafeAreaUpdate = useCallback((metrics: Metrics) => {
