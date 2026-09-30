@@ -34,6 +34,9 @@ const MAPPING = {
   "settings": "settings",
   "event.busy": "event-busy",
   "warning": "warning",
+  "bubble.left.fill": "chat-bubble",
+  "bubble.left.and.bubble.right.fill": "forum",
+  "paperclip": "attach-file",
 } as const satisfies Record<string, ComponentProps<typeof MaterialIcons>["name"]>;
 
 export function IconSymbol({
