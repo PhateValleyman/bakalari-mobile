@@ -140,23 +140,35 @@ mirror:github:
     - git remote add github "https://x-access-token:${GITHUB_TOKEN}@github.com/PhateValleyman/bakalari-mobile.git"
     - git push github "HEAD:${CI_COMMIT_BRANCH}" --force
     - |
-      for apk in release/*.apk; do
-        filename="$(basename "$apk")"
-        upload_url="https://uploads.github.com/repos/PhateValleyman/bakalari-mobile/releases"
+      api="https://api.github.com/repos/PhateValleyman/bakalari-mobile"
+      release_json="$(curl --fail --silent --show-error \
+        -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+        -H "Accept: application/vnd.github+json" \
+        "$api/releases/tags/v${RELEASE_VERSION}" 2>/dev/null || true)"
+      release_id="$(jq -r '.id // empty' <<< "$release_json")"
+      if [ -z "$release_id" ]; then
         release_json="$(curl --fail --silent --show-error \
+          -X POST \
           -H "Authorization: Bearer ${GITHUB_TOKEN}" \
           -H "Accept: application/vnd.github+json" \
-          "$upload_url/tags/v${RELEASE_VERSION}" 2>/dev/null || true)"
-        release_id="$(jq -r '.id // empty' <<< "$release_json")"
-        if [ -z "$release_id" ]; then
-          release_json="$(curl --fail --silent --show-error \
-            -X POST \
+          -H "Content-Type: application/json" \
+          -d "$(jq -n --arg tag "v${RELEASE_VERSION}" --arg name "Bakaláři Mobile v${RELEASE_VERSION}" '{tag_name:$tag,name:$name,draft:false,prerelease:false}')" \
+          "$api/releases")"
+        release_id="$(jq -r '.id' <<< "$release_json")"
+      fi
+      test -n "$release_id"
+      for apk in release/*.apk; do
+        filename="$(basename "$apk")"
+        asset="$(curl --fail --silent --show-error \
+          -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+          -H "Accept: application/vnd.github+json" \
+          "$api/releases/$release_id/assets?per_page=100" | jq -r --arg n "$filename" '.[] | select(.name==$n) | .id')"
+        if [ -n "$asset" ]; then
+          curl --fail --silent --show-error \
+            -X DELETE \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n --arg tag "v${RELEASE_VERSION}" --arg name "Bakaláři Mobile v${RELEASE_VERSION}" '{tag_name:$tag,name:$name,draft:false,prerelease:false}')" \
-            "$upload_url")"
-          release_id="$(jq -r '.id' <<< "$release_json")"
+            "$api/releases/assets/$asset"
         fi
         curl --fail --silent --show-error \
           -X POST \
@@ -164,5 +176,5 @@ mirror:github:
           -H "Accept: application/vnd.github+json" \
           -H "Content-Type: application/vnd.android.package-archive" \
           --data-binary "@$apk" \
-          "${upload_url}/${release_id}/assets?name=${filename}"
+          "https://uploads.github.com/repos/PhateValleyman/bakalari-mobile/releases/$release_id/assets?name=${filename}"
       done
