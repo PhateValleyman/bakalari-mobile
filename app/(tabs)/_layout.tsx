@@ -20,58 +20,16 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.muted,
         tabBarButton: HapticTab,
         tabBarLabelStyle: { fontSize: 11, fontWeight: "600", marginBottom: 2 },
-        tabBarStyle: {
-          paddingTop: 8,
-          paddingBottom: bottomPadding,
-          height: tabBarHeight,
-          backgroundColor: colors.background,
-          borderTopColor: colors.border,
-          borderTopWidth: 0.5,
-        },
+        tabBarStyle: { paddingTop: 8, paddingBottom: bottomPadding, height: tabBarHeight, backgroundColor: colors.background, borderTopColor: colors.border, borderTopWidth: 0.5 },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Přehled",
-          tabBarIcon: ({ color }) => <IconSymbol size={23} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="schedule"
-        options={{
-          title: "Rozvrh",
-          tabBarIcon: ({ color }) => <IconSymbol size={23} name="calendar" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="grades"
-        options={{
-          title: "Známky",
-          tabBarIcon: ({ color }) => <IconSymbol size={23} name="chart.bar.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="homework"
-        options={{
-          title: "Úkoly",
-          tabBarIcon: ({ color }) => <IconSymbol size={23} name="checklist" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="absence"
-        options={{
-          title: "Absence",
-          tabBarIcon: ({ color }) => <IconSymbol size={23} name="event.busy" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Nastavení",
-          tabBarIcon: ({ color }) => <IconSymbol size={23} name="settings" color={color} />,
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: "Přehled", tabBarIcon: ({ color }) => <IconSymbol size={23} name="house.fill" color={color} /> }} />
+      <Tabs.Screen name="schedule" options={{ title: "Rozvrh", tabBarIcon: ({ color }) => <IconSymbol size={23} name="calendar" color={color} /> }} />
+      <Tabs.Screen name="grades" options={{ title: "Známky", tabBarIcon: ({ color }) => <IconSymbol size={23} name="chart.bar.fill" color={color} /> }} />
+      <Tabs.Screen name="homework" options={{ title: "Úkoly", tabBarIcon: ({ color }) => <IconSymbol size={23} name="checklist" color={color} /> }} />
+      <Tabs.Screen name="absence" options={{ title: "Absence", tabBarIcon: ({ color }) => <IconSymbol size={23} name="event.busy" color={color} /> }} />
+      <Tabs.Screen name="messages" options={{ title: "Zprávy", tabBarIcon: ({ color }) => <IconSymbol size={23} name="bubble.left.and.bubble.right.fill" color={color} /> }} />
+      <Tabs.Screen name="settings" options={{ title: "Nastavení", tabBarIcon: ({ color }) => <IconSymbol size={23} name="settings" color={color} /> }} />
     </Tabs>
   );
 }
