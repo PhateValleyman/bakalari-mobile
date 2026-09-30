@@ -35,12 +35,12 @@ export type Homework = {
 export type AbsenceDay = {
   date: string;
   dateLabel: string;
-  ok: number; // excused
-  missed: number; // unexcused
+  ok: number;
+  missed: number;
   late: number;
-  soon: number; // left early
-  school: number; // school-related absence
-  unsolved: number; // not yet excused
+  soon: number;
+  school: number;
+  unsolved: number;
 };
 
 export type AbsenceSubject = {
@@ -51,7 +51,7 @@ export type AbsenceSubject = {
   late: number;
   soon: number;
   school: number;
-  percent: number; // share of missed lessons, 0-100
+  percent: number;
   color: string;
 };
 
@@ -60,6 +60,21 @@ export type AbsenceSummary = {
   subjects: AbsenceSubject[];
   thresholdPercent: number | null;
   totals: { ok: number; missed: number; late: number; soon: number; school: number; unsolved: number };
+};
+
+export type BakalariMessage = {
+  id: string;
+  title: string;
+  text: string;
+  sentDate: string;
+  sender: string;
+  senderType?: string;
+  read: boolean;
+  canAnswer: boolean;
+  confirmed: boolean;
+  canConfirm: boolean;
+  type?: string;
+  attachments: { id: string; name: string; type?: string }[];
 };
 
 export const weekDays = [
