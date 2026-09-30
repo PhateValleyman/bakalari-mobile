@@ -9,7 +9,7 @@ variables:
   ANDROID_BUILD_TOOLS: "36.0.0"
   NODE_VERSION: "22"
   PNPM_VERSION: "9.12.0"
-  RELEASE_VERSION: "1.3"
+  RELEASE_VERSION: "1.3.0"
   GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
   NPM_CONFIG_FUND: "false"
   NPM_CONFIG_AUDIT: "false"
@@ -99,7 +99,7 @@ release:
       for apk in release/*.apk; do
         filename="$(basename "$apk")"
         url="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/bakalari-mobile/${RELEASE_VERSION}/${filename}"
-        assets="$(jq --arg name "$filename" --arg url "$url" '. + [{name:$name,url:$url,link_type:"package"}]' <<< "$assets")"
+        assets="$(printf '%s\n' "$assets" | jq --arg name "$filename" --arg url "$url" '. + [{name:$name,url:$url,link_type:"package"}]')"
       done
     - |
       payload="$(jq -n \
@@ -145,7 +145,7 @@ mirror:github:
         -H "Authorization: Bearer ${GITHUB_TOKEN}" \
         -H "Accept: application/vnd.github+json" \
         "$api/releases/tags/v${RELEASE_VERSION}" 2>/dev/null || true)"
-      release_id="$(jq -r '.id // empty' <<< "$release_json")"
+      release_id="$(printf '%s\n' "$release_json" | jq -r '.id // empty')"
       if [ -z "$release_id" ]; then
         release_json="$(curl --fail --silent --show-error \
           -X POST \
@@ -154,7 +154,7 @@ mirror:github:
           -H "Content-Type: application/json" \
           -d "$(jq -n --arg tag "v${RELEASE_VERSION}" --arg name "Bakaláři Mobile v${RELEASE_VERSION}" '{tag_name:$tag,name:$name,draft:false,prerelease:false}')" \
           "$api/releases")"
-        release_id="$(jq -r '.id' <<< "$release_json")"
+        release_id="$(printf '%s\n' "$release_json" | jq -r '.id // empty')"
       fi
       test -n "$release_id"
       for apk in release/*.apk; do
