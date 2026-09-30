@@ -46,7 +46,7 @@ const withAndroidNdkVersion: ConfigPlugin = (config) =>
     }
 
     const ndkVersion = "29.0.14206865";
-    const ndkPattern = /ndkVersion\\s+rootProject\\.ext\\.ndkVersion/;
+    const ndkPattern = /ndkVersion\s+rootProject\.ext\.ndkVersion/;
 
     if (ndkPattern.test(app.modResults.contents)) {
       app.modResults.contents = app.modResults.contents.replace(
