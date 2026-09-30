@@ -302,8 +302,10 @@ export async function bakalariFetch<T>(schoolUrl: string, path: string, init?: R
       headers: { ...(init?.headers ?? {}), Authorization: `Bearer ${latestToken}` },
     });
     if (!retryResponse.ok) throw new BakalariApiError(`Autorizovaný požadavek selhal (${retryResponse.status}).`, retryResponse.status);
+    if (retryResponse.status === 204) return undefined as T;
     return (await retryResponse.json()) as T;
   }
   if (!response.ok) throw new BakalariApiError(`Požadavek na Bakaláře selhal (${response.status}).`, response.status);
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }

@@ -17,7 +17,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 
 import { BakalariApiError, normalizeSchoolUrl } from "../lib/bakalari-api";
 import { bakalariCache, formatCacheAge } from "../lib/bakalari-cache";
-import { calculateAverage, changeLabel, getScheduleTimelineState, isCurrentLesson, normalizeHomework, normalizeMarks, normalizeTimetable, shiftWeekIsoDate, weekMondayIsoDate } from "../lib/bakalari-data";
+import { calculateAverage, changeLabel, getScheduleTimelineState, isCurrentLesson, normalizeHomework, normalizeMarks, normalizeMessages, normalizeTimetable, shiftWeekIsoDate, weekMondayIsoDate } from "../lib/bakalari-data";
 import { buildHomeworkReminderPlan } from "../lib/homework-notification-plan";
 import { nextTabPath } from "../lib/tab-navigation";
 
@@ -70,6 +70,24 @@ describe("Bakalari data normalization", () => {
     expect(homework[0]).toMatchObject({ id: "H1", subject: "Matematika", title: "Procvičit funkce", dueLabel: expect.stringContaining("31.") });
   });
 
+  it("normalizes Komens messages and removes HTML from their preview", () => {
+    const messages = normalizeMessages({
+      Messages: [{
+        Id: "M1",
+        Title: "Důležité <b>oznámení</b>",
+        Text: "<div>Ahoj<br />třído</div>",
+        SentDate: "2026-09-30T08:15:00+02:00",
+        Sender: { Name: "Ředitelství", Type: "administrator" },
+        Read: false,
+        Confirmed: false,
+        CanConfirm: true,
+        Type: "OBECNA",
+        Attachments: [{}],
+      }],
+    });
+    expect(messages[0]).toMatchObject({ id: "M1", title: "Důležité oznámení", text: "Ahoj třído", sentAt: "2026-09-30T08:15:00+02:00", senderName: "Ředitelství", read: false, canConfirm: true, attachmentsCount: 1 });
+  });
+
   it("plans two future reminders only for open homework", () => {
     const reminders = buildHomeworkReminderPlan([
       { id: "H1", subject: "Matematika", title: "Procvičit funkce", due: "2026-09-28", dueLabel: "do 28. 9.", color: "#2F7DF6", completed: false },
@@ -96,10 +114,12 @@ describe("offline cache", () => {
 
 describe("swipe tab navigation", () => {
   it("moves left and right without leaving the tab range", () => {
-    expect(nextTabPath("/homework", -100)).toBe("/settings");
+    expect(nextTabPath("/homework", -100)).toBe("/messages");
     expect(nextTabPath("/homework", 100)).toBe("/grades");
     expect(nextTabPath("/", 100)).toBeNull();
     expect(nextTabPath("/settings", -100)).toBeNull();
+    expect(nextTabPath("/settings", 100)).toBe("/messages");
+    expect(nextTabPath("/messages", -100)).toBe("/settings");
     expect(nextTabPath("/homework", 20)).toBeNull();
   });
 });

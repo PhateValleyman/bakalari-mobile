@@ -1,4 +1,4 @@
-export const TAB_PATHS = ["/", "/schedule", "/grades", "/homework", "/settings"] as const;
+export const TAB_PATHS = ["/", "/schedule", "/grades", "/homework", "/messages", "/settings"] as const;
 
 export type TabPath = (typeof TAB_PATHS)[number];
 
@@ -6,7 +6,8 @@ export function tabIndex(pathname: string): number {
   if (pathname.endsWith("/schedule")) return 1;
   if (pathname.endsWith("/grades")) return 2;
   if (pathname.endsWith("/homework")) return 3;
-  if (pathname.endsWith("/settings")) return 4;
+  if (pathname.endsWith("/messages")) return 4;
+  if (pathname.endsWith("/settings")) return 5;
   return pathname === "/" || pathname.endsWith("/(tabs)") ? 0 : -1;
 }
 

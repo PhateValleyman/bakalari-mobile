@@ -39,6 +39,21 @@ export type Homework = {
   completed: boolean;
 };
 
+export type Message = {
+  id: string;
+  title: string;
+  text: string;
+  sentAt: string;
+  sentDate: string;
+  senderName: string;
+  senderType?: string;
+  type: string;
+  read: boolean;
+  confirmed: boolean;
+  canConfirm: boolean;
+  attachmentsCount: number;
+};
+
 export const weekDays = [
   { key: "mon", label: "Po", date: "21" },
   { key: "tue", label: "Út", date: "22" },

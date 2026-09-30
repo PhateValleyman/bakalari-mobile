@@ -1,5 +1,5 @@
 import { bakalariFetch } from "./bakalari-api";
-import type { Grade, Homework, ScheduleItem } from "../shared/bakalari-data";
+import type { Grade, Homework, Message, ScheduleItem } from "../shared/bakalari-data";
 
 export type BakalariEntity = {
   Id?: string | number;
@@ -82,6 +82,23 @@ type BakalariHomework = {
 
 type BakalariHomeworkResponse = {
   Homeworks?: BakalariHomework[];
+};
+
+type BakalariMessage = {
+  Id?: string | number;
+  Title?: string;
+  Text?: string;
+  SentDate?: string;
+  Sender?: { Name?: string; Type?: string };
+  Attachments?: unknown[];
+  Read?: boolean;
+  Confirmed?: boolean;
+  CanConfirm?: boolean;
+  Type?: string;
+};
+
+type BakalariMessagesResponse = {
+  Messages?: BakalariMessage[];
 };
 
 export type ScheduleDay = {
@@ -367,6 +384,46 @@ export function normalizeHomework(payload: BakalariHomeworkResponse): Homework[]
 export async function fetchHomework(schoolUrl: string): Promise<Homework[]> {
   const payload = await bakalariFetch<BakalariHomeworkResponse>(schoolUrl, "/api/3/homeworks");
   return normalizeHomework(payload);
+}
+
+function stripHtml(value: string): string {
+  return value.replace(/<br\s*\/?>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/\s+/g, " ").trim();
+}
+
+function messageDateLabel(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value || "bez data";
+  return parsed.toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" });
+}
+
+export function normalizeMessages(payload: BakalariMessagesResponse): Message[] {
+  return (payload.Messages ?? []).map((item, index) => ({
+    id: text(item.Id) || `message-${index}`,
+    title: stripHtml(text(item.Title)) || "Bez předmětu",
+    text: stripHtml(text(item.Text)) || "Zpráva neobsahuje text.",
+    sentAt: text(item.SentDate),
+    sentDate: messageDateLabel(text(item.SentDate)),
+    senderName: text(item.Sender?.Name) || "Neznámý odesílatel",
+    senderType: text(item.Sender?.Type) || undefined,
+    type: text(item.Type) || "OBECNÁ",
+    read: Boolean(item.Read),
+    confirmed: Boolean(item.Confirmed),
+    canConfirm: Boolean(item.CanConfirm),
+    attachmentsCount: item.Attachments?.length ?? 0,
+  })).sort((left, right) => right.sentAt.localeCompare(left.sentAt));
+}
+
+export async function fetchMessages(schoolUrl: string): Promise<Message[]> {
+  const payload = await bakalariFetch<BakalariMessagesResponse>(schoolUrl, "/api/3/komens/messages/received", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "",
+  });
+  return normalizeMessages(payload);
+}
+
+export async function markMessageAsRead(schoolUrl: string, messageId: string): Promise<void> {
+  await bakalariFetch<void>(schoolUrl, `/api/3/komens/message/${encodeURIComponent(messageId)}/mark-as-read`, { method: "PUT" });
 }
 
 export function calculateAverage(grades: Grade[]): string {
