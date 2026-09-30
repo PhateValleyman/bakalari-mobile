@@ -6,7 +6,7 @@ variables:
   ANDROID_PLATFORM: "android-36"
   ANDROID_BUILD_TOOLS: "36.0.0"
   NODE_VERSION: "22"
-  PNPM_VERSION: "12.4.1"
+  PNPM_VERSION: "9.12.0"
   GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
   NPM_CONFIG_FUND: "false"
   NPM_CONFIG_AUDIT: "false"
@@ -20,6 +20,7 @@ cache:
 
 .android:
   image: ghcr.io/cirruslabs/android-sdk:36-ndk
+  stage: build
   before_script:
     - apt-get update -qq
     - DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl ca-certificates openjdk-17-jdk
@@ -27,7 +28,7 @@ cache:
     - export PATH="$JAVA_HOME/bin:$PATH"
     - java -version
     - sdkmanager "platforms;${ANDROID_PLATFORM}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${NDK_VERSION}"
-    - curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
+    - curl -fsSL "https://deb.nodesource.com/setup_${NODE_VERSION}.x" | bash -
     - apt-get install -y -qq nodejs
     - node --version
     - corepack enable
@@ -38,7 +39,6 @@ cache:
 
 build:redmi:
   extends: .android
-  stage: build
   script:
     - npx expo prebuild --platform android --clean
     - grep -n 'ndkVersion' android/app/build.gradle
@@ -53,7 +53,6 @@ build:redmi:
 
 build:tablet:
   extends: .android
-  stage: build
   script:
     - npx expo prebuild --platform android --clean
     - grep -n 'ndkVersion' android/app/build.gradle
