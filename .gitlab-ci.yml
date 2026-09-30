@@ -73,7 +73,7 @@ build:tablet:
       - release/bakalari-mobile_v${RELEASE_VERSION}_armeabi-v7a.apk
 
 release:
-  image: alpine:3.22
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
   stage: release
   needs:
     - job: build:redmi
@@ -83,8 +83,10 @@ release:
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
   before_script:
-    - apk add --no-cache curl jq
+    - apk add --no-cache curl
   script:
+    - test -f "release/bakalari-mobile_v${RELEASE_VERSION}_arm64-v8a.apk"
+    - test -f "release/bakalari-mobile_v${RELEASE_VERSION}_armeabi-v7a.apk"
     - ls -lh release/*.apk
     - |
       for apk in release/*.apk; do
@@ -94,47 +96,35 @@ release:
           --upload-file "$apk" \
           "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/bakalari-mobile/${RELEASE_VERSION}/${filename}"
       done
-    - |
-      assets='[]'
-      for apk in release/*.apk; do
-        filename="$(basename "$apk")"
-        url="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/bakalari-mobile/${RELEASE_VERSION}/${filename}"
-        assets="$(printf '%s\n' "$assets" | jq --arg name "$filename" --arg url "$url" '. + [{name:$name,url:$url,link_type:"package"}]')"
-      done
-    - |
-      payload="$(jq -n \
-        --arg name "Bakaláři Mobile v${RELEASE_VERSION}" \
-        --arg tag "v${RELEASE_VERSION}" \
-        --arg desc "Bakaláři Mobile v${RELEASE_VERSION} — Android APK release." \
-        --argjson assets "$assets" \
-        '{name:$name,tag_name:$tag,description:$desc,assets:{links:$assets}}')"
-      curl --fail --silent --show-error \
-        --request POST \
-        --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
-        --header "Content-Type: application/json" \
-        --data "$payload" \
-        "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/releases" \
-        || curl --fail --silent --show-error \
-          --request PUT \
-          --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
-          --header "Content-Type: application/json" \
-          --data "$payload" \
-          "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/releases/v${RELEASE_VERSION}"
+  release:
+    tag_name: "v${RELEASE_VERSION}"
+    name: "Bakaláři Mobile v${RELEASE_VERSION}"
+    description: "Bakaláři Mobile v${RELEASE_VERSION} — Android APK release."
+    assets:
+      links:
+        - name: "bakalari-mobile_v${RELEASE_VERSION}_arm64-v8a.apk"
+          url: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/bakalari-mobile/${RELEASE_VERSION}/bakalari-mobile_v${RELEASE_VERSION}_arm64-v8a.apk"
+          link_type: "package"
+        - name: "bakalari-mobile_v${RELEASE_VERSION}_armeabi-v7a.apk"
+          url: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/bakalari-mobile/${RELEASE_VERSION}/bakalari-mobile_v${RELEASE_VERSION}_armeabi-v7a.apk"
+          link_type: "package"
 
 mirror:github:
   image: alpine:3.22
   stage: mirror
   needs:
-    - job: build:redmi
-      artifacts: true
-    - job: build:tablet
-      artifacts: true
+    - job: release
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
   before_script:
     - apk add --no-cache curl git jq
   script:
-    - test -n "$GITHUB_TOKEN"
+    - |
+      if [ -z "${GITHUB_TOKEN:-}" ]; then
+        echo "ERROR: GITHUB_TOKEN is not available to this pipeline."
+        echo "Set GitLab CI/CD variable GITHUB_TOKEN and allow it on the master branch."
+        exit 1
+      fi
     - git config user.name "GitLab Mirror"
     - git config user.email "gitlab-mirror@noreply.local"
     - git remote add github "https://x-access-token:${GITHUB_TOKEN}@github.com/PhateValleyman/bakalari-mobile.git"
@@ -145,7 +135,7 @@ mirror:github:
         -H "Authorization: Bearer ${GITHUB_TOKEN}" \
         -H "Accept: application/vnd.github+json" \
         "$api/releases/tags/v${RELEASE_VERSION}" 2>/dev/null || true)"
-      release_id="$(printf '%s\n' "$release_json" | jq -r '.id // empty')"
+      release_id="$(printf '%s' "$release_json" | jq -r '.id // empty')"
       if [ -z "$release_id" ]; then
         release_json="$(curl --fail --silent --show-error \
           -X POST \
@@ -154,7 +144,7 @@ mirror:github:
           -H "Content-Type: application/json" \
           -d "$(jq -n --arg tag "v${RELEASE_VERSION}" --arg name "Bakaláři Mobile v${RELEASE_VERSION}" '{tag_name:$tag,name:$name,draft:false,prerelease:false}')" \
           "$api/releases")"
-        release_id="$(printf '%s\n' "$release_json" | jq -r '.id // empty')"
+        release_id="$(printf '%s' "$release_json" | jq -r '.id')"
       fi
       test -n "$release_id"
       for apk in release/*.apk; do
