@@ -15,7 +15,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { BakalariApiError, normalizeSchoolUrl } from "../lib/bakalari-api";
+import { BakalariApiError, normalizeSchoolUrl, shouldClearStoredSession } from "../lib/bakalari-api";
 import { bakalariCache, formatCacheAge } from "../lib/bakalari-cache";
 import { calculateAverage, changeLabel, getScheduleTimelineState, isCurrentLesson, normalizeHomework, normalizeMarks, normalizeMessages, normalizeTimetable, shiftWeekIsoDate, weekMondayIsoDate } from "../lib/bakalari-data";
 import { buildHomeworkReminderPlan } from "../lib/homework-notification-plan";
@@ -33,6 +33,15 @@ describe("normalizeSchoolUrl", () => {
   it("rejects an empty or unsupported address", () => {
     expect(() => normalizeSchoolUrl("")).toThrow(BakalariApiError);
     expect(() => normalizeSchoolUrl("ftp://school.example.cz")).toThrow(BakalariApiError);
+  });
+});
+
+describe("offline session recovery", () => {
+  it("keeps stored session for network errors but clears invalid credentials", () => {
+    expect(shouldClearStoredSession(new TypeError("offline"))).toBe(false);
+    expect(shouldClearStoredSession(new BakalariApiError("timeout", 408))).toBe(false);
+    expect(shouldClearStoredSession(new BakalariApiError("expired", 401))).toBe(true);
+    expect(shouldClearStoredSession(new BakalariApiError("invalid", 400, "invalid_grant"))).toBe(true);
   });
 });
 

@@ -25,6 +25,10 @@ export class BakalariApiError extends Error {
   }
 }
 
+export function shouldClearStoredSession(error: unknown): boolean {
+  return error instanceof BakalariApiError && (error.status === 401 || error.code === "invalid_grant");
+}
+
 const TOKEN_KEY_PREFIX = "bakalari-mobile.tokens.v2.";
 const TOKEN_SKEW_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -265,8 +269,11 @@ async function refreshStoredAccessToken(schoolUrl: string, tokens: BakalariToken
   try {
     const refreshed = await refreshPromise;
     return refreshed.tokenSet.accessToken;
-  } catch {
-    await clearBakalariTokens(normalizedSchoolUrl);
+  } catch (error) {
+    if (shouldClearStoredSession(error)) {
+      await clearBakalariTokens(normalizedSchoolUrl);
+    }
+    // Keep the last token pair for network errors so cached data remains available offline.
     return null;
   } finally {
     refreshInFlight.delete(normalizedSchoolUrl);
@@ -278,6 +285,11 @@ export async function getValidAccessToken(schoolUrl: string): Promise<string | n
   if (!tokens) return null;
   if (tokens.expiresAt - Date.now() > TOKEN_SKEW_MS) return tokens.accessToken;
   return refreshStoredAccessToken(schoolUrl, tokens);
+}
+
+// Offline startup must only check whether credentials are stored; refreshing belongs to API requests.
+export async function hasStoredBakalariSession(schoolUrl: string): Promise<boolean> {
+  return Boolean(await readTokens(schoolUrl));
 }
 
 // Force rotation when the school rejects an otherwise unexpired access token.

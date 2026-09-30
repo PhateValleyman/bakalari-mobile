@@ -4,7 +4,7 @@ import { Platform } from "react-native";
 
 import {
   clearBakalariTokens,
-  getValidAccessToken,
+  hasStoredBakalariSession,
   loginToBakalari,
   normalizeSchoolUrl,
 } from "@/lib/bakalari-api";
@@ -71,9 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStatus("signed_out");
         return;
       }
-      const accessToken = await getValidAccessToken(storedUser.schoolUrl);
+      const hasStoredSession = await hasStoredBakalariSession(storedUser.schoolUrl);
       if (!active) return;
-      if (accessToken) {
+      if (hasStoredSession) {
         setUser(storedUser);
         setStatus("signed_in");
       } else {
