@@ -110,12 +110,14 @@ async function deleteChunks(prefix: string, count: number): Promise<void> {
 
 async function readMeta(baseKey: string): Promise<TokenMeta | null> {
   const raw = await getStoredValue(`${baseKey}.meta`);
-  if (!raw) return null;
+    if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as Partial<TokenMeta>;
+    const accessCount = parsed.accessCount;
+    const refreshCount = parsed.refreshCount;
     if (
-      !Number.isInteger(parsed.accessCount) || parsed.accessCount <= 0 ||
-      !Number.isInteger(parsed.refreshCount) || parsed.refreshCount <= 0 ||
+      typeof accessCount !== "number" || !Number.isInteger(accessCount) || accessCount <= 0 ||
+      typeof refreshCount !== "number" || !Number.isInteger(refreshCount) || refreshCount <= 0 ||
       typeof parsed.expiresAt !== "number" || !Number.isFinite(parsed.expiresAt) || parsed.expiresAt <= 0
     ) {
       return null;

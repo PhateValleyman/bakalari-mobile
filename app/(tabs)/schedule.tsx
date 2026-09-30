@@ -38,7 +38,7 @@ export default function ScheduleScreen() {
         <Text className="text-sm font-bold text-foreground">{item.time}</Text>
         <View className="mt-1 h-7 w-px" style={{ backgroundColor: colors.border }} />
       </View>
-      <View className="flex-1 rounded-2xl bg-surface p-4" style={[styles.lessonCard, { borderLeftColor: item.color }]}> 
+      <View className="flex-1 rounded-2xl bg-surface p-4" style={[styles.lessonCard, { borderLeftColor: item.color }]}>
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-2">
             <View style={[styles.subjectDot, { backgroundColor: item.color }]} />

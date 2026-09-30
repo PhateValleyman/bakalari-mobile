@@ -108,6 +108,8 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    // Expo accepts function config plugins at runtime; this cast bridges the SDK 54 type definition.
+    // @ts-expect-error ConfigPlugin is supported by Expo's runtime plugin resolver.
     withAndroidNdkVersion,
     [
       "expo-audio",

@@ -18,6 +18,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 import { BakalariApiError, normalizeSchoolUrl } from "../lib/bakalari-api";
 import { bakalariCache, formatCacheAge } from "../lib/bakalari-cache";
 import { calculateAverage, normalizeMarks, normalizeTimetable } from "../lib/bakalari-data";
+import { getSwipeCardIndex } from "../lib/swipe-cards";
 
 describe("normalizeSchoolUrl", () => {
   it("adds https and removes a trailing slash", () => {
@@ -72,5 +73,15 @@ describe("offline cache", () => {
   it("formats cache age for the UI", () => {
     expect(formatCacheAge(Date.now())).toBe("právě teď");
     expect(formatCacheAge(null)).toBeNull();
+  });
+});
+
+describe("swipe card navigation", () => {
+  it("rounds to the nearest card and stays within the deck", () => {
+    expect(getSwipeCardIndex(0, 320, 3)).toBe(0);
+    expect(getSwipeCardIndex(180, 320, 3)).toBe(1);
+    expect(getSwipeCardIndex(9999, 320, 3)).toBe(2);
+    expect(getSwipeCardIndex(-50, 320, 3)).toBe(0);
+    expect(getSwipeCardIndex(100, 0, 3)).toBe(0);
   });
 });
