@@ -1,0 +1,32 @@
+name: Mirror to GitLab
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push master to GitLab
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+        run: |
+          # Configure the mirror identity used for GitLab synchronization.
+          git config user.name "GitHub Mirror"
+          git config user.email "github-mirror@noreply.local"
+
+          # Add GitLab as the destination using the protected GitLab token.
+          git remote add gitlab "https://oauth2:${GITLAB_TOKEN}@gitlab.com/PhateValleyman/bakalari-mobile.git"
+
+          # Push the exact GitHub master commit to the GitLab master branch.
+          git push gitlab HEAD:master --force
