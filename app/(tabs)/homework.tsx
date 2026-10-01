@@ -2,13 +2,16 @@ import * as Haptics from "expo-haptics";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { SwipeCardDeck } from "@/components/swipe-card-deck";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useBakalariHomeworks } from "@/hooks/use-bakalari-data";
 import type { Homework } from "@/shared/bakalari-data";
 
-function ping() { if (Platform.OS !== "web") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }
+function ping() {
+  if (Platform.OS !== "web") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+}
 
 export default function HomeworkScreen() {
   const colors = useColors();
@@ -46,9 +49,25 @@ export default function HomeworkScreen() {
   return (
     <ScreenContainer className="px-5" edges={["top", "left", "right"]}>
       <FlatList
-        data={visibleHomework} keyExtractor={(item) => item.id} renderItem={renderHomework} showsVerticalScrollIndicator={false} refreshing={refreshing} onRefresh={() => { ping(); refresh(); }} contentContainerStyle={styles.listContent}
-        ListHeaderComponent={<View><View className="pt-3"><View className="flex-row items-center justify-between"><View><Text className="text-sm font-semibold text-primary">Aktuální data školy</Text><Text className="mt-1 text-3xl font-bold text-foreground">Úkoly</Text></View><Pressable onPress={() => { ping(); refresh(); }} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}><IconSymbol name="arrow.clockwise" size={20} color={colors.primary} /></Pressable></View><Text className="mt-1 text-sm text-muted">Měj všechny termíny na jednom místě.</Text>{fromCache ? <Text className="mt-1 text-xs font-semibold text-warning">Offline cache · {cacheAge ?? "uloženo"}{refreshing ? " · synchronizuji…" : ""}</Text> : null}</View><View className="mt-6 flex-row items-center justify-between rounded-3xl bg-primary p-5" style={styles.summaryCard}><View><Text className="text-xs font-bold uppercase tracking-widest" style={{ color: "#DCEAFF" }}>K dokončení</Text><Text className="mt-1 text-3xl font-bold text-white">{loading ? "…" : openCount}</Text><Text className="mt-1 text-sm" style={{ color: "#DCEAFF" }}>{openCount === 1 ? "otevřený úkol" : "otevřené úkoly"}</Text></View><View className="rounded-2xl p-3" style={{ backgroundColor: "#FFFFFF22" }}><IconSymbol name="checklist" size={28} color="#FFFFFF" /></View></View><View className="mb-4 mt-7 flex-row items-center justify-between"><Text className="text-xl font-bold text-foreground">Seznam</Text><Pressable onPress={() => { ping(); setShowCompleted((value) => !value); }} style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}><Text className="text-xs font-bold text-primary">{showCompleted ? "Skrýt hotové" : "Zobrazit hotové"}</Text></Pressable></View></View>}
-        ListEmptyComponent={emptyState}
+        data={[] as Homework[]}
+        keyExtractor={(item) => item.id}
+        renderItem={null}
+        showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={() => { ping(); refresh(); }}
+        contentContainerStyle={styles.listContent}
+        ListHeaderComponent={
+          <View>
+            <View className="pt-3">
+              <View className="flex-row items-center justify-between"><View><Text className="text-sm font-semibold text-primary">Aktuální data školy</Text><Text className="mt-1 text-3xl font-bold text-foreground">Úkoly</Text></View><Pressable onPress={() => { ping(); refresh(); }} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}><IconSymbol name="arrow.clockwise" size={20} color={colors.primary} /></Pressable></View>
+              <Text className="mt-1 text-sm text-muted">Měj všechny termíny na jednom místě.</Text>
+              {fromCache ? <Text className="mt-1 text-xs font-semibold text-warning">Offline cache · {cacheAge ?? "uloženo"}{refreshing ? " · synchronizuji…" : ""}</Text> : null}
+            </View>
+            <View className="mt-6 flex-row items-center justify-between rounded-3xl bg-primary p-5" style={styles.summaryCard}><View><Text className="text-xs font-bold uppercase tracking-widest" style={{ color: "#DCEAFF" }}>K dokončení</Text><Text className="mt-1 text-3xl font-bold text-white">{loading ? "…" : openCount}</Text><Text className="mt-1 text-sm" style={{ color: "#DCEAFF" }}>{openCount === 1 ? "otevřený úkol" : "otevřené úkoly"}</Text></View><View className="rounded-2xl p-3" style={{ backgroundColor: "#FFFFFF22" }}><IconSymbol name="checklist" size={28} color="#FFFFFF" /></View></View>
+            <View className="mb-4 mt-7 flex-row items-center justify-between"><Text className="text-xl font-bold text-foreground">Seznam</Text><Pressable onPress={() => { ping(); setShowCompleted((value) => !value); }} style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}><Text className="text-xs font-bold text-primary">{showCompleted ? "Skrýt hotové" : "Zobrazit hotové"}</Text></Pressable></View>
+            {visibleHomework.length ? <SwipeCardDeck cards={visibleHomework.map((item) => ({ key: item.id, content: renderHomework({ item }) }))} accessibilityLabel="Karty domácích úkolů" /> : emptyState}
+          </View>
+        }
         ListFooterComponent={visibleHomework.length ? <Text className="mt-5 mb-4 text-center text-xs leading-5 text-muted">Potáhni seznam dolů pro obnovení · klepnutím označíš úkol jako hotový.</Text> : null}
       />
     </ScreenContainer>
@@ -58,7 +77,7 @@ export default function HomeworkScreen() {
 const styles = StyleSheet.create({
   listContent: { paddingBottom: 24 },
   summaryCard: { shadowColor: "#2F7DF6", shadowOpacity: 0.24, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 5 },
-  taskCard: { marginBottom: 10, borderRadius: 18, padding: 16, shadowColor: "#172033", shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
+  taskCard: { borderRadius: 18, padding: 16, shadowColor: "#172033", shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
   filterButton: { borderRadius: 999, backgroundColor: "#E5EEFF", paddingHorizontal: 12, paddingVertical: 8 },
   iconButton: { width: 42, height: 42, borderRadius: 14, backgroundColor: "#E5EEFF", alignItems: "center", justifyContent: "center" },
   retryButton: { marginTop: 14, borderTopWidth: 1, borderTopColor: "#E5EAF2", paddingTop: 13, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

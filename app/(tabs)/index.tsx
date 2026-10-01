@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { ActivityIndicator, Alert, FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { SwipeCardDeck } from "@/components/swipe-card-deck";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useBakalariGrades, useBakalariHomeworks, useBakalariSchedule } from "@/hooks/use-bakalari-data";
@@ -71,9 +72,9 @@ export default function HomeScreen() {
   return (
     <ScreenContainer className="px-5" edges={["top", "left", "right"]}>
       <FlatList
-        data={todaysSchedule}
+        data={[] as ScheduleItem[]}
         keyExtractor={(item) => item.id}
-        renderItem={renderScheduleItem}
+        renderItem={null}
         showsVerticalScrollIndicator={false}
         refreshing={scheduleRefreshing || gradesRefreshing || homeworkRefreshing}
         onRefresh={() => { ping(); refreshSchedule(); refreshGrades(); refreshHomeworks(); }}
@@ -101,41 +102,41 @@ export default function HomeScreen() {
               </Pressable>
             </View>
 
-            <View className="mt-5 rounded-3xl bg-primary p-5" style={styles.heroCard}>
-              <View className="flex-row items-start justify-between">
-                <View className="flex-1">
-                  <Text className="text-xs font-bold uppercase tracking-widest" style={{ color: "#DCEAFF" }}>Dnešní program</Text>
-                  <Text className="mt-2 text-2xl font-bold text-white">{scheduleLoading ? "Načítám rozvrh…" : `${todaysSchedule.length} vyučovací hodiny`}</Text>
-                  <Text className="mt-1 text-sm" style={{ color: "#DCEAFF" }}>{scheduleError ? "Rozvrh se nepodařilo načíst." : `Nejbližší hodina začíná v ${todaysSchedule[0]?.time ?? "—"}.`}</Text>
-                </View>
-                <View className="rounded-2xl p-3" style={{ backgroundColor: "#FFFFFF22" }}>
-                  <IconSymbol name="calendar" size={25} color="#FFFFFF" />
-                </View>
-              </View>
-              <Pressable onPress={() => { ping(); router.push("/schedule"); }} style={({ pressed }) => [styles.heroAction, pressed && styles.pressed]}>
-                <Text className="text-sm font-bold text-primary">Zobrazit celý rozvrh</Text>
-                <IconSymbol name="chevron.right" size={18} color={colors.primary} />
-              </Pressable>
-            </View>
-
-            <View className="mt-5 flex-row gap-3">
-              <View className="flex-1 rounded-2xl bg-surface p-4" style={styles.metricCard}>
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-xs font-semibold text-muted">Průměr</Text>
-                  <IconSymbol name="chart.bar.fill" size={18} color="#2F7DF6" />
-                </View>
-                <Text className="mt-2 text-2xl font-bold text-foreground">{gradesLoading ? "…" : average}</Text>
-                <Text className="mt-1 text-xs font-semibold" style={{ color: colors.success }}>průměr z API</Text>
-              </View>
-              <View className="flex-1 rounded-2xl bg-surface p-4" style={styles.metricCard}>
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-xs font-semibold text-muted">Úkoly</Text>
-                  <IconSymbol name="checklist" size={18} color="#F0A33A" />
-                </View>
-                <Text className="mt-2 text-2xl font-bold text-foreground">{homeworkLoading ? "…" : openHomework}</Text>
-                <Text className="mt-1 text-xs font-semibold text-warning">otevřené úkoly z API</Text>
-              </View>
-            </View>
+            <SwipeCardDeck cards={[
+              {
+                key: "today",
+                content: (
+                  <View className="mt-5 rounded-3xl bg-primary p-5" style={styles.heroCard}>
+                    <View className="flex-row items-start justify-between">
+                      <View className="flex-1">
+                        <Text className="text-xs font-bold uppercase tracking-widest" style={{ color: "#DCEAFF" }}>Dnešní program</Text>
+                        <Text className="mt-2 text-2xl font-bold text-white">{scheduleLoading ? "Načítám rozvrh…" : `${todaysSchedule.length} vyučovací hodiny`}</Text>
+                        <Text className="mt-1 text-sm" style={{ color: "#DCEAFF" }}>{scheduleError ? "Rozvrh se nepodařilo načíst." : `Nejbližší hodina začíná v ${todaysSchedule[0]?.time ?? "—"}.`}</Text>
+                      </View>
+                      <View className="rounded-2xl p-3" style={{ backgroundColor: "#FFFFFF22" }}><IconSymbol name="calendar" size={25} color="#FFFFFF" /></View>
+                    </View>
+                    <Pressable onPress={() => { ping(); router.push("/schedule"); }} style={({ pressed }) => [styles.heroAction, pressed && styles.pressed]}>
+                      <Text className="text-sm font-bold text-primary">Zobrazit celý rozvrh</Text><IconSymbol name="chevron.right" size={18} color={colors.primary} />
+                    </Pressable>
+                  </View>
+                ),
+              },
+              {
+                key: "metrics",
+                content: (
+                  <View className="mt-5 flex-row gap-3">
+                    <View className="flex-1 rounded-2xl bg-surface p-4" style={styles.metricCard}>
+                      <View className="flex-row items-center justify-between"><Text className="text-xs font-semibold text-muted">Průměr</Text><IconSymbol name="chart.bar.fill" size={18} color="#2F7DF6" /></View>
+                      <Text className="mt-2 text-2xl font-bold text-foreground">{gradesLoading ? "…" : average}</Text><Text className="mt-1 text-xs font-semibold" style={{ color: colors.success }}>průměr z API</Text>
+                    </View>
+                    <View className="flex-1 rounded-2xl bg-surface p-4" style={styles.metricCard}>
+                      <View className="flex-row items-center justify-between"><Text className="text-xs font-semibold text-muted">Úkoly</Text><IconSymbol name="checklist" size={18} color="#F0A33A" /></View>
+                      <Text className="mt-2 text-2xl font-bold text-foreground">{homeworkLoading ? "…" : openHomework}</Text><Text className="mt-1 text-xs font-semibold text-warning">otevřené úkoly z API</Text>
+                    </View>
+                  </View>
+                ),
+              },
+            ]} accessibilityLabel="Přehledové karty" />
 
             <View className="mt-7 mb-3 flex-row items-center justify-between">
               <Text className="text-xl font-bold text-foreground">Dnešní rozvrh</Text>
@@ -144,9 +145,9 @@ export default function HomeScreen() {
                 <IconSymbol name="chevron.right" size={16} color={colors.primary} />
               </Pressable>
             </View>
+            {todaysSchedule.length ? <SwipeCardDeck cards={todaysSchedule.map((item) => ({ key: item.id, content: renderScheduleItem({ item }) }))} accessibilityLabel="Dnešní hodiny" /> : scheduleEmpty}
           </View>
         }
-        ListEmptyComponent={scheduleEmpty}
         ListFooterComponent={
           <View className="mt-6 mb-4 rounded-2xl border border-border bg-surface p-4">
             <View className="flex-row items-center gap-3">
