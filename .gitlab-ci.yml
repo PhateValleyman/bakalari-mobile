@@ -2,6 +2,7 @@ stages:
   - build
   - release
   - mirror
+  - notify
 
 variables:
   NDK_VERSION: "29.0.14206865"
@@ -168,3 +169,228 @@ mirror:github:
           --data-binary "@$apk" \
           "https://uploads.github.com/repos/PhateValleyman/bakalari-mobile/releases/$release_id/assets?name=${filename}"
       done
+
+# Publish only version-tagged release assets to GitHub without mirroring or overwriting branches.
+mirror:github:tag:
+  image: alpine:3.22
+  stage: mirror
+  environment:
+    name: release
+    action: prepare
+  needs:
+    - job: build:redmi
+      artifacts: true
+    - job: build:tablet
+      artifacts: true
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/'
+  before_script:
+    - apk add --no-cache git python3
+  script:
+    - |
+      # Disable shell tracing and fail closed if the release token is unavailable.
+      set +x
+      set -e
+      test -n "${GITHUB_RELEASE_TOKEN:-}"
+      # Verify the protected release tag matches the version used to build both APKs.
+      test "$CI_COMMIT_TAG" = "v${RELEASE_VERSION}"
+      test -f "release/bakalari-mobile_v${RELEASE_VERSION}_arm64-v8a.apk"
+      test -f "release/bakalari-mobile_v${RELEASE_VERSION}_armeabi-v7a.apk"
+      # Use a temporary askpass helper so the PAT is never placed in a Git URL or file.
+      askpass="$(mktemp)"
+      trap 'rm -f "$askpass"' EXIT
+      cat > "$askpass" <<'ASKPASS'
+      #!/bin/sh
+      case "$1" in
+        *sername*) printf '%s\n' 'x-access-token' ;;
+        *assword*) printf '%s\n' "$GITHUB_RELEASE_TOKEN" ;;
+        *) exit 1 ;;
+      esac
+      ASKPASS
+      chmod 700 "$askpass"
+      export GIT_ASKPASS="$askpass" GIT_TERMINAL_PROMPT=0
+      # Add a credential-free remote and publish only the current protected release tag.
+      git remote add github "https://github.com/PhateValleyman/bakalari-mobile.git"
+      remote_listing="$(git ls-remote --refs github "refs/tags/${CI_COMMIT_TAG}")"
+      remote_tag="$(printf '%s\n' "$remote_listing" | awk 'NR == 1 { print $1 }')"
+      if [ -z "$remote_tag" ]; then
+        git push github "HEAD:refs/tags/${CI_COMMIT_TAG}"
+      elif [ "$remote_tag" != "$CI_COMMIT_SHA" ]; then
+        echo "GitHub already has this tag at a different commit; refusing to move it." >&2
+        exit 1
+      fi
+      # Publish the release and assets with an in-memory HTTP client; never put the PAT in arguments or URLs.
+      python3 - <<'PY'
+      import json
+      import os
+      import pathlib
+      import urllib.error
+      import urllib.parse
+      import urllib.request
+
+      # Send authenticated GitHub requests without logging URLs, headers, or exception text.
+      def github_request(method, url, body=None, content_type="application/json"):
+          headers = {
+              "Authorization": "Bearer " + os.environ["GITHUB_RELEASE_TOKEN"],
+              "Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "bakalari-mobile-release-bridge",
+          }
+          if body is not None:
+              headers["Content-Type"] = content_type
+          request = urllib.request.Request(url, data=body, headers=headers, method=method)
+          try:
+              with urllib.request.urlopen(request, timeout=180) as response:
+                  raw = response.read()
+                  return (json.loads(raw.decode("utf-8")) if raw else {}), response.status
+          except urllib.error.HTTPError as error:
+              if method == "GET" and error.code == 404:
+                  return None, 404
+              raise SystemExit(f"GitHub API request failed with HTTP {error.code}") from None
+          except Exception as error:
+              raise SystemExit(f"GitHub API request failed ({type(error).__name__})") from None
+
+      # Reuse an existing release for this tag or create it if it does not exist yet.
+      tag = os.environ["CI_COMMIT_TAG"]
+      api = "https://api.github.com/repos/PhateValleyman/bakalari-mobile"
+      encoded_tag = urllib.parse.quote(tag, safe="")
+      release, status = github_request("GET", f"{api}/releases/tags/{encoded_tag}")
+      if status == 404:
+          payload = json.dumps({
+              "tag_name": tag,
+              "name": f"Bakaláři Mobile {tag}",
+              "body": "Android APK release published from GitLab CI.",
+              "draft": False,
+              "prerelease": False,
+          }).encode("utf-8")
+          release, status = github_request("POST", f"{api}/releases", payload)
+      if status not in (200, 201) or not release or not release.get("id"):
+          raise SystemExit("GitHub release creation or lookup failed.")
+
+      # Upload only missing APKs and preserve any release assets already present.
+      release_id = release["id"]
+      assets, status = github_request("GET", f"{api}/releases/{release_id}/assets?per_page=100")
+      if status != 200 or not isinstance(assets, list):
+          raise SystemExit("GitHub release asset lookup failed.")
+      existing_names = {item.get("name") for item in assets}
+      version = os.environ["RELEASE_VERSION"]
+      apk_files = [
+          pathlib.Path(f"release/bakalari-mobile_v{version}_arm64-v8a.apk"),
+          pathlib.Path(f"release/bakalari-mobile_v{version}_armeabi-v7a.apk"),
+      ]
+      for apk in apk_files:
+          if apk.name in existing_names:
+              print(f"Keeping existing GitHub asset: {apk.name}")
+              continue
+          upload_url = "https://uploads.github.com/repos/PhateValleyman/bakalari-mobile/releases/" + str(release_id) + "/assets?" + urllib.parse.urlencode({"name": apk.name})
+          uploaded, status = github_request("POST", upload_url, apk.read_bytes(), "application/octet-stream")
+          if status not in (200, 201) or not uploaded or not uploaded.get("id"):
+              raise SystemExit("GitHub release asset upload failed.")
+
+      # Report only the public tag, never the credential or authenticated request URL.
+      print(f"GitHub release assets are ready for {tag}.")
+      PY
+
+# Deliver both built APKs and a release notice only after GitHub publication succeeds.
+notify:telegram:
+  image: alpine:3.22
+  stage: notify
+  environment:
+    name: release
+    action: prepare
+  needs:
+    - job: build:redmi
+      artifacts: true
+    - job: build:tablet
+      artifacts: true
+    - job: mirror:github:tag
+      artifacts: false
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/'
+  before_script:
+    - apk add --no-cache python3
+  script:
+    - |
+      # Run the Telegram client without shell tracing; the bot URL and token stay in memory only.
+      python3 - <<'PY'
+      import json
+      import os
+      import pathlib
+      import urllib.error
+      import urllib.request
+      import uuid
+
+      # Build a multipart request without printing its endpoint or response body.
+      def post_multipart(method, fields, file_path=None):
+          boundary = "----CueRelease" + uuid.uuid4().hex
+          chunks = []
+          for name, value in fields.items():
+              chunks.extend([
+                  f"--{boundary}\r\n".encode(),
+                  f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode(),
+                  str(value).encode("utf-8"),
+                  b"\r\n",
+              ])
+          if file_path is not None:
+              path = pathlib.Path(file_path)
+              chunks.extend([
+                  f"--{boundary}\r\n".encode(),
+                  f'Content-Disposition: form-data; name="document"; filename="{path.name}"\r\n'.encode(),
+                  b"Content-Type: application/vnd.android.package-archive\r\n\r\n",
+                  path.read_bytes(),
+                  b"\r\n",
+              ])
+          chunks.append(f"--{boundary}--\r\n".encode())
+          body = b"".join(chunks)
+          # Construct the token-bearing URL only at runtime and never include it in diagnostics.
+          url = "https://api.telegram.org/bot" + os.environ["TELEGRAM_BOT_TOKEN"] + "/" + method
+          request = urllib.request.Request(
+              url,
+              data=body,
+              headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(request, timeout=180) as response:
+                  status = response.status
+                  result = json.loads(response.read().decode("utf-8"))
+          except urllib.error.HTTPError as error:
+              raise RuntimeError(f"Telegram {method} failed with HTTP {error.code}") from None
+          except Exception as error:
+              raise RuntimeError(f"Telegram {method} failed ({type(error).__name__})") from None
+          if status < 200 or status >= 300 or not result.get("ok"):
+              raise RuntimeError(f"Telegram {method} rejected the request (HTTP {status})")
+
+      # Require an exact tag/version match and both APKs below Telegram's 50 MB upload limit.
+      tag = os.environ["CI_COMMIT_TAG"]
+      version = os.environ["RELEASE_VERSION"]
+      if tag != f"v{version}":
+          raise SystemExit("Release tag does not match RELEASE_VERSION.")
+      files = [
+          pathlib.Path(f"release/bakalari-mobile_v{version}_arm64-v8a.apk"),
+          pathlib.Path(f"release/bakalari-mobile_v{version}_armeabi-v7a.apk"),
+      ]
+      for path in files:
+          if not path.is_file():
+              raise SystemExit("A required release APK is missing.")
+          if path.stat().st_size > 50_000_000:
+              raise SystemExit(f"APK exceeds Telegram's 50 MB limit: {path.name}")
+
+      # Upload both APKs as multipart data, not by URL, to support files above Telegram's URL-fetch limit.
+      chat_id = os.environ["TELEGRAM_CHAT_ID"]
+      for path in files:
+          post_multipart(
+              "sendDocument",
+              {"chat_id": chat_id, "caption": f"Bakaláři Mobile {tag} — {path.name}"},
+              path,
+          )
+
+      # Send the release notice only after both APK uploads succeed.
+      text = (
+          f"Nové vydání Bakaláři Mobile {tag}.\n"
+          f"GitLab: https://gitlab.com/PhateValleyman/bakalari-mobile/-/releases/{tag}\n"
+          f"GitHub: https://github.com/PhateValleyman/bakalari-mobile/releases/tag/{tag}"
+      )
+      post_multipart("sendMessage", {"chat_id": chat_id, "text": text})
+      print(f"Telegram delivery succeeded for {tag}: {len(files)} APK files and release notice.")
+      PY
