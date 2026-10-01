@@ -12,3 +12,8 @@
 
 - Ověřit nativní Android gesto na zařízení po sestavení APK.
 - Zvážit přístupnější alternativu k horizontálnímu gestu (šipky nebo tlačítka pro přepnutí karty).
+
+## Oprava swipe navigace
+
+- Swipe patří mezi celé obrazovky v pořadí Přehled → Rozvrh → Známky → Úkoly → Absence → Zprávy → Nastavení.
+- Vnitřní obsah obrazovek zůstává svislý; odstraněn horizontální swipe deck z jednotlivých karet.
