@@ -2,23 +2,14 @@ import * as Haptics from "expo-haptics";
 import { useState } from "react";
 import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { SwipeCardDeck } from "@/components/swipe-card-deck";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useBakalariMessages } from "@/hooks/use-bakalari-data";
 import type { BakalariMessage } from "@/shared/bakalari-data";
 
-function ping() {
-  if (Platform.OS !== "web") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-}
-
-function formatMessageDate(value: string): string {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" });
-}
+function ping() { if (Platform.OS !== "web") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }
+function formatMessageDate(value: string): string { if (!value) return ""; const date = new Date(value); if (Number.isNaN(date.getTime())) return value; return date.toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" }); }
 
 export default function MessagesScreen() {
   const colors = useColors();
@@ -31,9 +22,14 @@ export default function MessagesScreen() {
     return (
       <Pressable onPress={() => { ping(); setOpenId(open ? null : item.id); }} style={({ pressed }) => [styles.card, { backgroundColor: colors.surface, borderColor: item.read ? colors.border : colors.primary }, !item.read && styles.unreadCard, pressed && styles.pressed]}>
         <View className="flex-row items-start gap-3">
-          <View className="h-11 w-11 items-center justify-center rounded-2xl" style={{ backgroundColor: item.read ? colors.background : "#E5EEFF" }}><IconSymbol name="bubble.left.fill" size={20} color={item.read ? colors.muted : colors.primary} /></View>
+          <View className="h-11 w-11 items-center justify-center rounded-2xl" style={{ backgroundColor: item.read ? colors.background : "#E5EEFF" }}>
+            <IconSymbol name="bubble.left.fill" size={20} color={item.read ? colors.muted : colors.primary} />
+          </View>
           <View className="flex-1">
-            <View className="flex-row items-start justify-between gap-2"><Text className={`flex-1 text-base font-bold ${item.read ? "text-foreground" : "text-primary"}`}>{item.title}</Text><Text className="text-xs font-semibold text-muted">{formatMessageDate(item.sentDate)}</Text></View>
+            <View className="flex-row items-start justify-between gap-2">
+              <Text className={`flex-1 text-base font-bold ${item.read ? "text-foreground" : "text-primary"}`}>{item.title}</Text>
+              <Text className="text-xs font-semibold text-muted">{formatMessageDate(item.sentDate)}</Text>
+            </View>
             <Text className="mt-1 text-sm font-semibold text-foreground">{item.sender}</Text>
             {item.senderType ? <Text className="mt-0.5 text-xs text-muted">{item.senderType}</Text> : null}
             {!open ? <Text className="mt-2 text-sm leading-5 text-muted" numberOfLines={2}>{item.text || "Bez textu"}</Text> : <Text className="mt-3 text-sm leading-6 text-foreground">{item.text || "Bez textu"}</Text>}
@@ -50,21 +46,15 @@ export default function MessagesScreen() {
   return (
     <ScreenContainer className="px-5" edges={["top", "left", "right"]}>
       <FlatList
-        data={[] as BakalariMessage[]}
+        data={messages}
         keyExtractor={(item) => item.id}
-        renderItem={null}
+        renderItem={renderMessage}
         showsVerticalScrollIndicator={false}
         refreshing={refreshing}
         onRefresh={() => { ping(); refresh(); }}
         contentContainerStyle={styles.listContent}
-        ListHeaderComponent={
-          <View>
-            <View className="pt-3"><View className="flex-row items-center justify-between"><View><Text className="text-sm font-semibold text-primary">Komens</Text><Text className="mt-1 text-3xl font-bold text-foreground">Zprávy</Text></View><Pressable onPress={() => { ping(); refresh(); }} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}><IconSymbol name="arrow.clockwise" size={20} color={colors.primary} /></Pressable></View><Text className="mt-1 text-sm text-muted">Přijaté zprávy od školy a učitelů.</Text></View>
-            <View className="mt-6 flex-row items-center justify-between rounded-3xl bg-primary p-5" style={styles.summaryCard}><View><Text className="text-xs font-bold uppercase tracking-widest" style={{ color: "#DCEAFF" }}>Nepřečtené</Text><Text className="mt-1 text-3xl font-bold text-white">{loading ? "…" : unreadCount}</Text><Text className="mt-1 text-sm" style={{ color: "#DCEAFF" }}>{unreadCount === 1 ? "nová zpráva" : "nové zprávy"}</Text></View><View className="rounded-2xl p-3" style={{ backgroundColor: "#FFFFFF22" }}><IconSymbol name="bubble.left.and.bubble.right.fill" size={28} color="#FFFFFF" /></View></View>
-            <View className="mb-4 mt-7 flex-row items-center justify-between"><Text className="text-xl font-bold text-foreground">Doručená pošta</Text><Text className="text-xs font-semibold text-muted">{messages.length} celkem</Text></View>
-            {messages.length ? <SwipeCardDeck cards={messages.map((item) => ({ key: item.id, content: renderMessage({ item }) }))} accessibilityLabel="Karty Komens zpráv" /> : emptyState}
-          </View>
-        }
+        ListHeaderComponent={<View><View className="pt-3"><View className="flex-row items-center justify-between"><View><Text className="text-sm font-semibold text-primary">Komens</Text><Text className="mt-1 text-3xl font-bold text-foreground">Zprávy</Text></View><Pressable onPress={() => { ping(); refresh(); }} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}><IconSymbol name="arrow.clockwise" size={20} color={colors.primary} /></Pressable></View><Text className="mt-1 text-sm text-muted">Přijaté zprávy od školy a učitelů.</Text></View><View className="mt-6 flex-row items-center justify-between rounded-3xl bg-primary p-5" style={styles.summaryCard}><View><Text className="text-xs font-bold uppercase tracking-widest" style={{ color: "#DCEAFF" }}>Nepřečtené</Text><Text className="mt-1 text-3xl font-bold text-white">{loading ? "…" : unreadCount}</Text><Text className="mt-1 text-sm" style={{ color: "#DCEAFF" }}>{unreadCount === 1 ? "nová zpráva" : "nové zprávy"}</Text></View><View className="rounded-2xl p-3" style={{ backgroundColor: "#FFFFFF22" }}><IconSymbol name="bubble.left.and.bubble.right.fill" size={28} color="#FFFFFF" /></View></View><View className="mb-4 mt-7 flex-row items-center justify-between"><Text className="text-xl font-bold text-foreground">Doručená pošta</Text><Text className="text-xs font-semibold text-muted">{messages.length} celkem</Text></View></View>}
+        ListEmptyComponent={emptyState}
         ListFooterComponent={messages.length ? <Text className="mb-4 mt-5 text-center text-xs leading-5 text-muted">Potáhni seznam dolů pro obnovení · klepnutím zprávu rozbalíš.</Text> : null}
       />
     </ScreenContainer>
@@ -73,7 +63,7 @@ export default function MessagesScreen() {
 
 const styles = StyleSheet.create({
   listContent: { paddingBottom: 24 },
-  card: { borderRadius: 18, borderWidth: 1, padding: 16, shadowColor: "#172033", shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
+  card: { marginBottom: 10, borderRadius: 18, borderWidth: 1, padding: 16, shadowColor: "#172033", shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
   unreadCard: { borderWidth: 1.5 },
   summaryCard: { shadowColor: "#2F7DF6", shadowOpacity: 0.24, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 5 },
   iconButton: { width: 42, height: 42, borderRadius: 14, backgroundColor: "#E5EEFF", alignItems: "center", justifyContent: "center" },

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { WindowSwipeGesture } from "@/components/window-swipe-gesture";
 import { useColors } from "@/hooks/use-colors";
 
 export default function TabLayout() {
@@ -13,8 +14,9 @@ export default function TabLayout() {
   const tabBarHeight = 58 + bottomPadding;
 
   return (
-    <Tabs
-      screenOptions={{
+    <WindowSwipeGesture>
+      <Tabs
+        screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.tint,
         tabBarInactiveTintColor: colors.muted,
@@ -28,8 +30,8 @@ export default function TabLayout() {
           borderTopColor: colors.border,
           borderTopWidth: 0.5,
         },
-      }}
-    >
+        }}
+      >
       <Tabs.Screen name="index" options={{ title: "Přehled", tabBarIcon: ({ color }) => <IconSymbol size={23} name="house.fill" color={color} /> }} />
       <Tabs.Screen name="schedule" options={{ title: "Rozvrh", tabBarIcon: ({ color }) => <IconSymbol size={23} name="calendar" color={color} /> }} />
       <Tabs.Screen name="grades" options={{ title: "Známky", tabBarIcon: ({ color }) => <IconSymbol size={23} name="chart.bar.fill" color={color} /> }} />
@@ -37,6 +39,7 @@ export default function TabLayout() {
       <Tabs.Screen name="absence" options={{ title: "Absence", tabBarIcon: ({ color }) => <IconSymbol size={23} name="event.busy" color={color} /> }} />
       <Tabs.Screen name="messages" options={{ title: "Zprávy", tabBarIcon: ({ color }) => <IconSymbol size={23} name="bubble.left.and.bubble.right.fill" color={color} /> }} />
       <Tabs.Screen name="settings" options={{ title: "Nastavení", tabBarIcon: ({ color }) => <IconSymbol size={23} name="settings" color={color} /> }} />
-    </Tabs>
+      </Tabs>
+    </WindowSwipeGesture>
   );
 }

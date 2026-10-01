@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { SwipeCardDeck } from "@/components/swipe-card-deck";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useBakalariSchedule } from "@/hooks/use-bakalari-data";
@@ -85,9 +84,9 @@ export default function ScheduleScreen() {
   return (
     <ScreenContainer className="px-5" edges={["top", "left", "right"]}>
       <FlatList
-        data={[] as ScheduleItem[]}
+        data={lessons}
         keyExtractor={(item) => item.id}
-        renderItem={null}
+        renderItem={renderLesson}
         showsVerticalScrollIndicator={false}
         refreshing={refreshing}
         onRefresh={() => { ping(); refresh(); }}
@@ -126,9 +125,9 @@ export default function ScheduleScreen() {
               <Text className="text-xl font-bold text-foreground">{selectedDay?.label ?? "Dnes"} {selectedDay?.dateLabel ?? ""}</Text>
               <Text className="text-sm font-semibold text-muted">{loading ? "…" : `${lessons.length} ${lessons.length === 1 ? "hodina" : "hodin"}`}</Text>
             </View>
-            {lessons.length ? <SwipeCardDeck cards={lessons.map((item, index) => ({ key: item.id, content: renderLesson({ item, index }) }))} accessibilityLabel="Hodiny vybraného dne" /> : emptyState}
           </View>
         }
+        ListEmptyComponent={emptyState}
       />
     </ScreenContainer>
   );

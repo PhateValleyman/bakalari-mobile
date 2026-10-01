@@ -3,7 +3,6 @@ import { useMemo } from "react";
 import { ActivityIndicator, Alert, FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { SwipeCardDeck } from "@/components/swipe-card-deck";
 import { ScreenContainer } from "@/components/screen-container";
 import { useBakalariGrades } from "@/hooks/use-bakalari-data";
 import { calculateAverage } from "@/lib/bakalari-data";
@@ -76,9 +75,9 @@ export default function GradesScreen() {
   return (
     <ScreenContainer className="px-5" edges={["top", "left", "right"]}>
       <FlatList
-        data={[] as Grade[]}
+        data={grades}
         keyExtractor={(item) => item.id}
-        renderItem={null}
+        renderItem={renderGrade}
         showsVerticalScrollIndicator={false}
         refreshing={refreshing}
         onRefresh={() => { ping(); refresh(); }}
@@ -113,9 +112,9 @@ export default function GradesScreen() {
               <Text className="text-xl font-bold text-foreground">Předměty</Text>
               <Text className="text-sm font-semibold text-muted">{loading ? "…" : `${grades.length} celkem`}</Text>
             </View>
-            {grades.length ? <SwipeCardDeck cards={grades.map((item) => ({ key: item.id, content: renderGrade({ item }) }))} accessibilityLabel="Karty známek" /> : emptyState}
           </View>
         }
+        ListEmptyComponent={emptyState}
         ListFooterComponent={grades.length ? <Text className="mt-5 mb-4 text-center text-xs leading-5 text-muted">Klepnutím na předmět zobrazíš detail známek z API.</Text> : null}
       />
     </ScreenContainer>

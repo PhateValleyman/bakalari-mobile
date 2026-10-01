@@ -2,7 +2,6 @@ import * as Haptics from "expo-haptics";
 import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { SwipeCardDeck } from "@/components/swipe-card-deck";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useBakalariAbsence } from "@/hooks/use-bakalari-data";
@@ -47,18 +46,17 @@ export default function AbsenceScreen() {
   return (
     <ScreenContainer className="px-5" edges={["top", "left", "right"]}>
       <FlatList
-        data={[] as AbsenceDay[]} keyExtractor={(item) => item.date} renderItem={null} showsVerticalScrollIndicator={false} refreshing={refreshing} onRefresh={() => { ping(); refresh(); }} contentContainerStyle={styles.list}
+        data={data?.days ?? []} keyExtractor={(item) => item.date} renderItem={renderDay} showsVerticalScrollIndicator={false} refreshing={refreshing} onRefresh={() => { ping(); refresh(); }} contentContainerStyle={styles.list}
         ListHeaderComponent={<View>
           <View className="pt-3"><View className="flex-row items-center justify-between"><View><Text className="text-sm font-semibold text-primary">Docházka</Text><Text className="mt-1 text-3xl font-bold text-foreground">Absence</Text></View><Pressable onPress={() => { ping(); refresh(); }} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}><IconSymbol name="arrow.clockwise" size={20} color={colors.primary} /></Pressable></View>{fromCache ? <Text className="mt-1 text-xs font-semibold text-warning">Offline cache · {cacheAge ?? "uloženo"}{refreshing ? " · synchronizuji…" : ""}</Text> : null}</View>
           {totals ? <View className="mt-6 flex-row gap-3">
             <View className="flex-1 rounded-3xl bg-primary p-4"><Text className="text-xs font-bold uppercase" style={{ color: "#DCEAFF" }}>Omluveno</Text><Text className="mt-1 text-3xl font-bold text-white">{totals.ok}</Text></View>
             <View className="flex-1 rounded-3xl p-4" style={{ backgroundColor: totals.unsolved || totals.missed ? colors.error : colors.success }}><Text className="text-xs font-bold uppercase" style={{ color: "#FFFFFFCC" }}>Neomluveno</Text><Text className="mt-1 text-3xl font-bold text-white">{Math.max(totals.missed, totals.unsolved)}</Text></View>
           </View> : null}
-          {data?.subjects.length ? <View className="mt-7"><Text className="mb-1 text-xl font-bold text-foreground">Podle předmětů</Text>{threshold != null ? <Text className="mb-3 text-xs text-muted">Limit školy: {threshold.toLocaleString("cs-CZ")} % zameškaných hodin</Text> : <View className="mb-3" />}<SwipeCardDeck cards={data.subjects.map((item) => ({ key: item.id, content: renderSubject(item) }))} accessibilityLabel="Absence podle předmětů" /></View> : null}
+          {data?.subjects.length ? <View className="mt-7"><Text className="mb-1 text-xl font-bold text-foreground">Podle předmětů</Text>{threshold != null ? <Text className="mb-3 text-xs text-muted">Limit školy: {threshold.toLocaleString("cs-CZ")} % zameškaných hodin</Text> : <View className="mb-3" />}{data.subjects.map(renderSubject)}</View> : null}
           {data?.days.length ? <Text className="mb-3 mt-4 text-xl font-bold text-foreground">Po dnech</Text> : null}
-          {data?.days.length ? <SwipeCardDeck cards={data.days.map((item) => ({ key: item.date, content: renderDay({ item }) }))} accessibilityLabel="Absence podle dnů" /> : null}
-          {data?.subjects.length || data?.days.length ? null : emptyState}
         </View>}
+        ListEmptyComponent={data?.subjects.length ? null : emptyState}
       />
     </ScreenContainer>
   );
