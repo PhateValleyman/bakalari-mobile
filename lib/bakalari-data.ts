@@ -1,5 +1,5 @@
 import { bakalariFetch } from "./bakalari-api";
-import type { Grade, Homework, ScheduleItem } from "../shared/bakalari-data";
+import type { AbsenceSummary, Grade, Homework, ScheduleItem } from "../shared/bakalari-data";
 
 export type BakalariEntity = {
   Id?: string | number;
@@ -15,6 +15,9 @@ type BakalariTimetableResponse = { Hours?: BakalariHour[]; Days?: BakalariDay[];
 type BakalariMark = { MarkDate?: string; EditDate?: string; Caption?: string; MarkText?: string; PointsText?: string; Weight?: number | null; IsPoints?: boolean; IsNew?: boolean };
 type BakalariMarkSubject = { Marks?: BakalariMark[]; Subject?: BakalariEntity; AverageText?: string };
 type BakalariMarksResponse = { Subjects?: BakalariMarkSubject[] };
+type BakalariAbsenceDay = { Date?: string; Unsolved?: number; Ok?: number; Missed?: number; Late?: number; Soon?: number; School?: number };
+type BakalariAbsenceSubject = { SubjectName?: string; LessonsCount?: number; Base?: number; Late?: number; Soon?: number; School?: number };
+type BakalariAbsenceResponse = { PercentageThreshold?: number; Absences?: BakalariAbsenceDay[]; AbsencesPerSubject?: BakalariAbsenceSubject[] };
 type BakalariHomework = {
   Id?: string | number;
   Subject?: BakalariEntity;
@@ -89,6 +92,16 @@ export function normalizeMarks(payload: BakalariMarksResponse): Grade[] {
   }).filter((grade) => grade.grades.length > 0);
 }
 export async function fetchMarks(schoolUrl: string): Promise<Grade[]> { const payload = await bakalariFetch<BakalariMarksResponse>(schoolUrl, "/api/3/marks"); return normalizeMarks(payload); }
+
+function numeric(value: unknown): number { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : 0; }
+function absenceDateLabel(date: string): string { if (!date) return "—"; const parsed = new Date(date); return Number.isNaN(parsed.getTime()) ? datePart(date) : parsed.toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric" }); }
+export function normalizeAbsence(payload: BakalariAbsenceResponse): AbsenceSummary {
+  const subjects = (payload.AbsencesPerSubject ?? []).map((item, index) => { const lessons = numeric(item.LessonsCount); const absence = numeric(item.Base); return { id: `${text(item.SubjectName) || "subject"}-${index}`, subject: text(item.SubjectName) || "Ostatní", lessons, absence, late: numeric(item.Late), soon: numeric(item.Soon), school: numeric(item.School), percent: lessons ? (absence / lessons) * 100 : 0, color: colorForSubject(text(item.SubjectName) || String(index)) }; });
+  const days = (payload.Absences ?? []).map((item, index) => { const date = datePart(item.Date); return { date, dateLabel: absenceDateLabel(item.Date ?? ""), ok: numeric(item.Ok), missed: numeric(item.Missed), late: numeric(item.Late), soon: numeric(item.Soon), school: numeric(item.School), unsolved: numeric(item.Unsolved) }; });
+  const totals = days.reduce((result, item) => ({ ok: result.ok + item.ok, missed: result.missed + item.missed, late: result.late + item.late, soon: result.soon + item.soon, school: result.school + item.school, unsolved: result.unsolved + item.unsolved }), { ok: 0, missed: 0, late: 0, soon: 0, school: 0, unsolved: 0 });
+  return { days, subjects, thresholdPercent: typeof payload.PercentageThreshold === "number" ? payload.PercentageThreshold * 100 : null, totals };
+}
+export async function fetchAbsence(schoolUrl: string): Promise<AbsenceSummary> { const payload = await bakalariFetch<BakalariAbsenceResponse>(schoolUrl, "/api/3/absence/student"); return normalizeAbsence(payload); }
 
 function homeworkList(payload: BakalariHomeworksResponse): BakalariHomework[] { return Array.isArray(payload) ? payload : payload.Homeworks ?? []; }
 function dueLabel(value: string): string {

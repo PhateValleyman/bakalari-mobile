@@ -155,7 +155,7 @@ export default function HomeScreen() {
               </View>
               <View className="flex-1">
                 <Text className="text-sm font-bold text-foreground">Škola je připojená</Text>
-                <Text className="mt-1 text-xs leading-5 text-muted">Rozvrh a známky se načítají přímo ze školního Bakaláři API. Úkoly budou napojené v další fázi.</Text>
+                <Text className="mt-1 text-xs leading-5 text-muted">Rozvrh, známky a úkoly se načítají přímo ze školního Bakaláři API a ukládají se pro offline zobrazení.</Text>
               </View>
             </View>
             <Pressable onPress={handleConnectionInfo} style={({ pressed }) => [styles.connectButton, pressed && styles.pressed]}>

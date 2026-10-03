@@ -32,6 +32,10 @@ const MAPPING = {
   "trending.down": "trending-down",
   "minus": "remove",
   "settings": "settings",
+  "absence": "event-available",
+  "bubble.left.fill": "chat-bubble-outline",
+  "bubble.left.and.bubble.right.fill": "forum",
+  "paperclip": "attach-file",
 } as const satisfies Record<string, ComponentProps<typeof MaterialIcons>["name"]>;
 
 export function IconSymbol({
