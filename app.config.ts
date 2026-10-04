@@ -1,7 +1,7 @@
 // Load environment variables with proper priority (system > .env)
 import "./scripts/load-env.js";
 import type { ExpoConfig } from "expo/config";
-import { withAppBuildGradle, type ConfigPlugin } from "expo/config-plugins";
+import { withAndroidManifest, withAppBuildGradle, type ConfigPlugin } from "expo/config-plugins";
 
 // Bundle ID format: space.manus.<project_name_dots>.<timestamp>
 // e.g., "my-app" created at 2024-01-15 10:30:45 -> "space.manus.my.app.t20240115103045"
@@ -77,6 +77,22 @@ const withAndroidNdkVersion: ConfigPlugin = (config) =>
     return app;
   });
 
+const withKioskActivity: ConfigPlugin = (config) =>
+  withAndroidManifest(config, (app) => {
+    const application = app.modResults.manifest.application?.[0];
+    const activity = application?.activity?.find((entry) =>
+      entry.$?.["android:name"]?.includes("MainActivity")
+    );
+    if (activity) {
+      activity.$ = {
+        ...activity.$,
+        "android:lockTaskMode": "if_whitelisted",
+        "android:excludeFromRecents": "true",
+      };
+    }
+    return app;
+  });
+
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
@@ -130,11 +146,18 @@ const config: ExpoConfig = {
   plugins: [
     "expo-router",
     [
+      "expo-camera",
+      {
+        cameraPermission: "Povol aplikaci skenovat QR kódy rodičovského odemčení.",
+      },
+    ],
+    [
       "expo-notifications",
       {
         color: "#2F7DF6",
       },
     ],
+    withKioskActivity as unknown as NonNullable<ExpoConfig["plugins"]>[number],
     withAndroidNdkVersion as unknown as NonNullable<ExpoConfig["plugins"]>[number],
     [
       "expo-audio",

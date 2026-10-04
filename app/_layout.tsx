@@ -9,6 +9,7 @@ import { Platform } from "react-native";
 import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { AuthProvider } from "@/lib/auth-context";
+import { ParentalLockOverlay, ParentalProvider } from "@/lib/parental-context";
 import {
   SafeAreaFrameContext,
   SafeAreaInsetsContext,
@@ -106,7 +107,7 @@ export default function RootLayout() {
         <SafeAreaProvider initialMetrics={providerInitialMetrics}>
           <SafeAreaFrameContext.Provider value={frame}>
             <SafeAreaInsetsContext.Provider value={insets}>
-              <AuthProvider>{content}</AuthProvider>
+              <ParentalProvider><AuthProvider>{content}<ParentalLockOverlay /></AuthProvider></ParentalProvider>
             </SafeAreaInsetsContext.Provider>
           </SafeAreaFrameContext.Provider>
         </SafeAreaProvider>
@@ -117,7 +118,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <SafeAreaProvider initialMetrics={providerInitialMetrics}>
-        <AuthProvider>{content}</AuthProvider>
+        <ParentalProvider><AuthProvider>{content}<ParentalLockOverlay /></AuthProvider></ParentalProvider>
       </SafeAreaProvider>
     </ThemeProvider>
   );

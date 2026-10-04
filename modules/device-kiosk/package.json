@@ -1,0 +1,13 @@
+{
+  "name": "device-kiosk",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.ts",
+  "types": "index.ts",
+  "keywords": ["expo-module"],
+  "expo": {
+    "autolinking": {
+      "platforms": ["android"]
+    }
+  }
+}

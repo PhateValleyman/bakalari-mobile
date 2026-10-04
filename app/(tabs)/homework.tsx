@@ -1,11 +1,12 @@
 import * as Haptics from "expo-haptics";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useBakalariHomeworks } from "@/hooks/use-bakalari-data";
+import { useParentalControl } from "@/lib/parental-context";
 import type { Homework } from "@/shared/bakalari-data";
 
 function ping() { if (Platform.OS !== "web") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }
@@ -20,10 +21,17 @@ function dueUrgency(due: string): "urgent" | "soon" | "normal" | "none" {
 export default function HomeworkScreen() {
   const colors = useColors();
   const { data: homework, loading, refreshing, error, cacheAge, fromCache, save, refresh } = useBakalariHomeworks();
+  const { state: parentalState, completeHomework } = useParentalControl();
   const [showCompleted, setShowCompleted] = useState(false);
   const visibleHomework = useMemo(() => homework.filter((item) => showCompleted || !item.completed), [homework, showCompleted]);
   const openCount = homework.filter((item) => !item.completed).length;
   const urgentCount = homework.filter((item) => !item.completed && dueUrgency(item.due) === "urgent").length;
+
+  useEffect(() => {
+    if (parentalState.locked && parentalState.lockReason === "homework" && !loading && !error && homework.length > 0 && openCount === 0) {
+      void completeHomework();
+    }
+  }, [completeHomework, error, homework.length, loading, openCount, parentalState.lockReason, parentalState.locked]);
 
   const toggleHomework = (id: string) => {
     ping();

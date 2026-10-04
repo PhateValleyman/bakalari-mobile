@@ -1,0 +1,15 @@
+<manifest>
+  <receiver
+    android:name="expo.modules.devicekiosk.DeviceKioskAdminReceiver"
+    android:description="@string/device_kiosk_admin_description"
+    android:exported="true"
+    android:label="Bakaláři Mobile Device Admin"
+    android:permission="android.permission.BIND_DEVICE_ADMIN">
+    <intent-filter>
+      <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+    </intent-filter>
+    <meta-data
+      android:name="android.app.device_admin"
+      android:resource="@xml/device_admin_receiver" />
+  </receiver>
+</manifest>
